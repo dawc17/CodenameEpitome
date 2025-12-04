@@ -14,7 +14,15 @@ Enemy::Enemy(const EnemyData& data, Vector2 pos)
 void Enemy::Update(float dt) {
     if (IsDead()) return;
     
-    UpdateAI(dt);
+    // Update status effect timers
+    if (m_immobilizeTimer > 0) {
+        m_immobilizeTimer -= dt;
+    }
+    
+    // Skip AI update if immobilized
+    if (!IsImmobilized()) {
+        UpdateAI(dt);
+    }
     
     m_attackTimer -= dt;
     m_stateTimer -= dt;
@@ -25,8 +33,14 @@ void Enemy::Update(float dt) {
 void Enemy::Render() {
     if (IsDead()) return;
     
-    // Draw enemy body
-    DrawCircleV(m_position, m_radius, m_data.color);
+    // Draw enemy body - tint blue if immobilized
+    Color bodyColor = IsImmobilized() ? ColorTint(m_data.color, SKYBLUE) : m_data.color;
+    DrawCircleV(m_position, m_radius, bodyColor);
+    
+    // Draw stun indicator if immobilized
+    if (IsImmobilized()) {
+        DrawCircleLinesV(m_position, m_radius + 3, SKYBLUE);
+    }
     
     // Draw health bar above enemy
     float healthPercent = static_cast<float>(m_health) / m_data.maxHealth;
@@ -43,6 +57,10 @@ void Enemy::Render() {
 void Enemy::TakeDamage(int amount) {
     m_health -= amount;
     if (m_health < 0) m_health = 0;
+}
+
+void Enemy::Immobilize(float duration) {
+    m_immobilizeTimer = duration;
 }
 
 bool Enemy::HasLineOfSight() const {

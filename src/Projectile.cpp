@@ -4,8 +4,8 @@
 
 // Projectile implementation
 Projectile::Projectile(Vector2 pos, Vector2 dir, float speed, int damage,
-                       bool playerOwned, bool piercing, Color color)
-    : Entity(pos, 6.0f)
+                       bool playerOwned, bool piercing, Color color, float size)
+    : Entity(pos, size)
     , m_direction(Vector2Normalize(dir))
     , m_speed(speed)
     , m_damage(damage)
@@ -66,6 +66,6 @@ void ProjectileManager::Clear() {
 
 void ProjectileManager::SpawnProjectile(Vector2 pos, Vector2 dir, float speed, 
                                          int damage, bool playerOwned, 
-                                         bool piercing, Color color) {
-    m_projectiles.emplace_back(pos, dir, speed, damage, playerOwned, piercing, color);
+                                         bool piercing, Color color, float size) {
+    m_projectiles.emplace_back(pos, dir, speed, damage, playerOwned, piercing, color, size);
 }

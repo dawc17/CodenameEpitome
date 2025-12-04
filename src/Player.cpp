@@ -6,14 +6,60 @@
 #include "Utils.hpp"
 
 Player::Player() : Entity({0, 0}, 16.0f) {
+    // Default to Terrorist character
+    SetCharacter(CharacterType::TERRORIST);
+}
+
+CharacterData Player::GetCharacterData(CharacterType type) {
+    CharacterData data;
+    data.type = type;
+    
+    switch (type) {
+        case CharacterType::TERRORIST:
+            data.name = "Terrorist";
+            data.description = "Wields a pistol. Explosion ability deals AoE damage.";
+            data.stats.name = "Terrorist";
+            data.stats.maxHealth = 100;
+            data.stats.maxEnergy = 100;
+            data.stats.moveSpeed = 200.0f;
+            data.color = Color{180, 80, 80, 255};  // Reddish
+            break;
+            
+        case CharacterType::COUNTER_TERRORIST:
+            data.name = "Counter-Terrorist";
+            data.description = "Wields a burst rifle. Flashbang immobilizes enemies.";
+            data.stats.name = "Counter-Terrorist";
+            data.stats.maxHealth = 110;
+            data.stats.maxEnergy = 90;
+            data.stats.moveSpeed = 190.0f;
+            data.color = Color{80, 80, 180, 255};  // Bluish
+            break;
+    }
+    
+    return data;
+}
+
+void Player::SetCharacter(CharacterType type) {
+    m_characterType = type;
+    CharacterData charData = GetCharacterData(type);
+    
+    m_stats = charData.stats;
+    m_color = charData.color;
     m_health = m_stats.maxHealth;
     m_energy = m_stats.maxEnergy;
     
-    // Start with a pistol
-    m_weapon = std::make_unique<Weapon>(Weapon::CreatePistolData());
-    
-    // Start with Shield Dash ability
-    m_ability = Abilities::CreateShieldDash();
+    // Set weapon and ability based on character
+    switch (type) {
+        case CharacterType::TERRORIST:
+            m_weapon = std::make_unique<Weapon>(Weapon::CreatePistolData());
+            m_ability = Abilities::CreateExplosion();
+            break;
+            
+        case CharacterType::COUNTER_TERRORIST:
+            m_weapon = std::make_unique<Weapon>(Weapon::CreateBurstRifleData());
+            m_ability = Abilities::CreateFlashbang();
+            break;
+    }
 }
 
 void Player::Update(float dt) {
@@ -196,6 +242,11 @@ bool Player::SpendRunCurrency(int amount) {
 }
 
 void Player::Reset() {
+    // Get character data for current character type
+    CharacterData charData = GetCharacterData(m_characterType);
+    
+    m_stats = charData.stats;
+    m_color = charData.color;
     m_health = m_stats.maxHealth;
     m_energy = m_stats.maxEnergy;
     m_runCurrency = 0;
@@ -203,16 +254,21 @@ void Player::Reset() {
     m_velocity = {0, 0};
     m_aimDirection = {1, 0};
     m_currentTarget = nullptr;
-    m_color = BLUE;
     m_energyRegenDelay = 0.0f;
     m_energyRegenAccumulator = 0.0f;
     
-    // Reset stats to default
-    m_stats = CharacterStats();
-    
-    // Reset weapon to pistol
-    m_weapon = std::make_unique<Weapon>(Weapon::CreatePistolData());
-    m_ability = Abilities::CreateShieldDash();
+    // Reset weapon and ability based on character
+    switch (m_characterType) {
+        case CharacterType::TERRORIST:
+            m_weapon = std::make_unique<Weapon>(Weapon::CreatePistolData());
+            m_ability = Abilities::CreateExplosion();
+            break;
+            
+        case CharacterType::COUNTER_TERRORIST:
+            m_weapon = std::make_unique<Weapon>(Weapon::CreateBurstRifleData());
+            m_ability = Abilities::CreateFlashbang();
+            break;
+    }
 }
 
 void Player::ApplyBuff(const BuffData& buff) {

@@ -62,6 +62,9 @@ public:
     // Spawn points
     std::vector<Vector2> GetEnemySpawnPoints() const { return m_enemySpawns; }
     Vector2 GetPlayerSpawnPoint() const { return m_playerSpawn; }
+    Vector2 GetTreasurePosition() const { return m_treasurePosition; }
+    bool HasTreasure() const { return m_type == RoomType::TREASURE && !m_treasureCollected; }
+    void CollectTreasure() { m_treasureCollected = true; }
     
     // Room dimensions
     static constexpr int WIDTH = 15;
@@ -79,6 +82,8 @@ private:
     std::vector<Door> m_doors;
     std::vector<Vector2> m_enemySpawns;
     Vector2 m_playerSpawn;
+    Vector2 m_treasurePosition;
+    bool m_treasureCollected = false;
 };
 
 class DungeonManager {
@@ -86,7 +91,7 @@ public:
     DungeonManager();
     ~DungeonManager() = default;
     
-    void Generate(unsigned int seed, int floorNumber);
+    void Generate(unsigned int seed, int stage, int subLevel);
     void Update(float dt);
     void Render();
     void RenderMinimap(float x, float y, float scale);
@@ -101,10 +106,19 @@ public:
     // Collision
     bool IsWalkable(Vector2 worldPos) const;
     bool CheckDoorCollision(Vector2 worldPos, int& roomId, int& direction);
+    bool CheckPortalCollision(Vector2 worldPos) const;
+    bool CheckTreasureCollision(Vector2 worldPos);  // Returns true and collects treasure if touched
     
-    // Floor info
-    int GetFloorNumber() const { return m_floorNumber; }
+    // Floor info - Soul Knight style (stage-sublevel, e.g., 1-1, 1-2... 1-5, 2-1...)
+    int GetStage() const { return m_stage; }
+    int GetSubLevel() const { return m_subLevel; }
+    bool IsBossLevel() const { return m_subLevel == 5; }
     int GetRoomCount() const { return static_cast<int>(m_rooms.size()); }
+    
+    // Portal
+    bool IsPortalActive() const { return m_portalActive; }
+    void ActivatePortal();
+    Vector2 GetPortalPosition() const { return m_portalPosition; }
     
 private:
     void GenerateLayout(unsigned int seed);
@@ -112,7 +126,12 @@ private:
     
     std::vector<std::unique_ptr<Room>> m_rooms;
     Room* m_currentRoom = nullptr;
-    int m_floorNumber = 1;
+    int m_stage = 1;
+    int m_subLevel = 1;
+    
+    // Portal to next level
+    bool m_portalActive = false;
+    Vector2 m_portalPosition = {0, 0};
     
     // Camera offset for smooth transitions
     Vector2 m_cameraTarget = {0, 0};

@@ -15,8 +15,13 @@ struct BuffData {
     std::function<void(class Player*)> applyFunc;
 };
 
+enum class CharacterType {
+    TERRORIST,
+    COUNTER_TERRORIST
+};
+
 struct CharacterStats {
-    std::string name = "Knight";
+    std::string name = "Terrorist";
     int maxHealth = 100;
     int maxEnergy = 100;
     float moveSpeed = 200.0f;
@@ -24,6 +29,15 @@ struct CharacterStats {
     float damageMultiplier = 1.0f;  // For buff system
     float fireRateMultiplier = 1.0f;  // For buff system
     float cooldownMultiplier = 1.0f;  // For ability cooldown reduction
+};
+
+// Character data definitions
+struct CharacterData {
+    CharacterType type;
+    std::string name;
+    std::string description;
+    CharacterStats stats;
+    Color color;
 };
 
 class Player : public Entity {
@@ -71,12 +85,18 @@ public:
     // Respawn
     void Reset();
     
+    // Character selection
+    void SetCharacter(CharacterType type);
+    CharacterType GetCharacterType() const { return m_characterType; }
+    static CharacterData GetCharacterData(CharacterType type);
+    
 private:
     void HandleMovement(float dt);
     void UpdateAutoAim();
     void RegenerateEnergy(float dt);
     
     CharacterStats m_stats;
+    CharacterType m_characterType = CharacterType::TERRORIST;
     int m_health = 100;
     int m_energy = 100;
     int m_runCurrency = 0;
@@ -94,7 +114,7 @@ private:
     // Energy regeneration
     float m_energyRegenDelay = 0.0f;  // Time before regen starts
     float m_energyRegenAccumulator = 0.0f;  // Accumulate fractional energy
-    static constexpr float ENERGY_REGEN_DELAY = 3.0f;  // 3 seconds after use
+    static constexpr float ENERGY_REGEN_DELAY = 1.5f;  // 3 seconds after use
     static constexpr float ENERGY_REGEN_RATE = 5.0f;  // 5 energy per second
     
     // Auto-aim settings

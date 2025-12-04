@@ -36,6 +36,10 @@ public:
     void TakeDamage(int amount);
     bool IsDead() const { return m_health <= 0; }
     
+    // Status effects
+    void Immobilize(float duration);
+    bool IsImmobilized() const { return m_immobilizeTimer > 0.0f; }
+    
     const EnemyData& GetData() const { return m_data; }
     int GetHealth() const { return m_health; }
     int GetMaxHealth() const { return m_data.maxHealth; }
@@ -63,6 +67,7 @@ protected:
     Vector2 m_repositionTarget = {0, 0};  // Target position for repositioning
     Vector2 m_lastKnownPlayerPos = {0, 0};  // Last known player position
     float m_searchTimer = 0.0f;  // Timer for searching behavior
+    float m_immobilizeTimer = 0.0f;  // Timer for immobilize effect
     
     // AI state
     enum class AIState { IDLE, CHASE, ATTACK, SPECIAL, REPOSITION, SEARCH };

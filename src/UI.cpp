@@ -78,8 +78,23 @@ void UIManager::RenderHUD(Player* player) {
     DrawText(currencyText, Game::SCREEN_WIDTH - currencyWidth - padding,
              Game::SCREEN_HEIGHT - padding - 24, 24, GOLD);
     
-    // Minimap (top-right corner)
+    // Level display (top-center)
     DungeonManager* dungeon = Game::Instance().GetDungeon();
+    if (dungeon) {
+        char levelText[32];
+        snprintf(levelText, sizeof(levelText), "LEVEL %d-%d", dungeon->GetStage(), dungeon->GetSubLevel());
+        int levelWidth = MeasureText(levelText, 28);
+        DrawText(levelText, (Game::SCREEN_WIDTH - levelWidth) / 2, padding, 28, WHITE);
+        
+        // Boss indicator
+        if (dungeon->IsBossLevel()) {
+            const char* bossText = "BOSS";
+            int bossWidth = MeasureText(bossText, 20);
+            DrawText(bossText, (Game::SCREEN_WIDTH - bossWidth) / 2, padding + 32, 20, RED);
+        }
+    }
+    
+    // Minimap (top-right corner)
     if (dungeon) {
         dungeon->RenderMinimap(Game::SCREEN_WIDTH - 200, padding, 1.0f);
     }
@@ -329,4 +344,190 @@ bool UIManager::Button(Rectangle bounds, const std::string& text, int fontSize) 
              fontSize, WHITE);
     
     return hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+}
+
+void UIManager::RenderHub(CharacterType selectedCharacter) {
+    // Title
+    const char* title = "THE HUB";
+    int titleWidth = MeasureText(title, 50);
+    DrawText(title, (Game::SCREEN_WIDTH - titleWidth) / 2, 40, 50, WHITE);
+    
+    const char* subtitle = "Select your character, then enter the portal";
+    int subtitleWidth = MeasureText(subtitle, 18);
+    DrawText(subtitle, (Game::SCREEN_WIDTH - subtitleWidth) / 2, 100, 18, LIGHTGRAY);
+    
+    // Character selection boxes
+    float boxWidth = 200;
+    float boxHeight = 280;
+    float spacing = 60;
+    float startX = (Game::SCREEN_WIDTH - (2 * boxWidth + spacing)) / 2.0f;
+    float y = 180;
+    
+    // Character 1: Terrorist
+    CharacterData terroristData = Player::GetCharacterData(CharacterType::TERRORIST);
+    Rectangle terroristBox = {startX, y, boxWidth, boxHeight};
+    bool terroristHovered = CheckCollisionPointRec(GetMousePosition(), terroristBox);
+    bool terroristSelected = (selectedCharacter == CharacterType::TERRORIST);
+    
+    Color terroristBg = terroristSelected ? Color{80, 50, 50, 255} : 
+                        (terroristHovered ? Color{60, 40, 40, 255} : Color{40, 30, 30, 255});
+    DrawRectangleRec(terroristBox, terroristBg);
+    DrawRectangleLinesEx(terroristBox, terroristSelected ? 3.0f : 2.0f, 
+                         terroristSelected ? GOLD : (terroristHovered ? WHITE : GRAY));
+    
+    // Character icon (circle)
+    DrawCircle(static_cast<int>(terroristBox.x + boxWidth/2), 
+               static_cast<int>(terroristBox.y + 60), 35, terroristData.color);
+    
+    // Name
+    int nameWidth = MeasureText(terroristData.name.c_str(), 22);
+    DrawText(terroristData.name.c_str(), 
+             static_cast<int>(terroristBox.x + (boxWidth - nameWidth) / 2),
+             static_cast<int>(terroristBox.y + 110), 22, WHITE);
+    
+    // Stats
+    DrawText("HP: 100  Energy: 100", static_cast<int>(terroristBox.x + 20),
+             static_cast<int>(terroristBox.y + 145), 14, LIGHTGRAY);
+    DrawText("Weapon: Pistol", static_cast<int>(terroristBox.x + 20),
+             static_cast<int>(terroristBox.y + 165), 14, LIGHTGRAY);
+    DrawText("Skill: Explosion", static_cast<int>(terroristBox.x + 20),
+             static_cast<int>(terroristBox.y + 185), 14, ORANGE);
+    
+    // Description
+    DrawText("AoE damage around", static_cast<int>(terroristBox.x + 20),
+             static_cast<int>(terroristBox.y + 220), 12, GRAY);
+    DrawText("self", static_cast<int>(terroristBox.x + 20),
+             static_cast<int>(terroristBox.y + 235), 12, GRAY);
+    
+    if (terroristHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Game::Instance().SelectCharacter(CharacterType::TERRORIST);
+    }
+    
+    // Character 2: Counter-Terrorist
+    CharacterData ctData = Player::GetCharacterData(CharacterType::COUNTER_TERRORIST);
+    Rectangle ctBox = {startX + boxWidth + spacing, y, boxWidth, boxHeight};
+    bool ctHovered = CheckCollisionPointRec(GetMousePosition(), ctBox);
+    bool ctSelected = (selectedCharacter == CharacterType::COUNTER_TERRORIST);
+    
+    Color ctBg = ctSelected ? Color{50, 50, 80, 255} : 
+                 (ctHovered ? Color{40, 40, 60, 255} : Color{30, 30, 40, 255});
+    DrawRectangleRec(ctBox, ctBg);
+    DrawRectangleLinesEx(ctBox, ctSelected ? 3.0f : 2.0f, 
+                         ctSelected ? GOLD : (ctHovered ? WHITE : GRAY));
+    
+    // Character icon
+    DrawCircle(static_cast<int>(ctBox.x + boxWidth/2), 
+               static_cast<int>(ctBox.y + 60), 35, ctData.color);
+    
+    // Name
+    nameWidth = MeasureText(ctData.name.c_str(), 22);
+    DrawText(ctData.name.c_str(), 
+             static_cast<int>(ctBox.x + (boxWidth - nameWidth) / 2),
+             static_cast<int>(ctBox.y + 110), 22, WHITE);
+    
+    // Stats
+    DrawText("HP: 110  Energy: 90", static_cast<int>(ctBox.x + 20),
+             static_cast<int>(ctBox.y + 145), 14, LIGHTGRAY);
+    DrawText("Weapon: Burst Rifle", static_cast<int>(ctBox.x + 20),
+             static_cast<int>(ctBox.y + 165), 14, LIGHTGRAY);
+    DrawText("Skill: Flashbang", static_cast<int>(ctBox.x + 20),
+             static_cast<int>(ctBox.y + 185), 14, SKYBLUE);
+    
+    // Description
+    DrawText("Immobilize enemies", static_cast<int>(ctBox.x + 20),
+             static_cast<int>(ctBox.y + 220), 12, GRAY);
+    DrawText("in radius", static_cast<int>(ctBox.x + 20),
+             static_cast<int>(ctBox.y + 235), 12, GRAY);
+    
+    if (ctHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Game::Instance().SelectCharacter(CharacterType::COUNTER_TERRORIST);
+    }
+    
+    // Portal
+    float portalWidth = 150;
+    float portalHeight = 80;
+    Rectangle portalBox = {
+        (Game::SCREEN_WIDTH - portalWidth) / 2.0f,
+        static_cast<float>(Game::SCREEN_HEIGHT - 150),
+        portalWidth,
+        portalHeight
+    };
+    
+    bool portalHovered = CheckCollisionPointRec(GetMousePosition(), portalBox);
+    
+    // Animated portal glow
+    float glowIntensity = (sinf(m_animTimer * 3.0f) + 1.0f) / 2.0f;
+    Color portalColor = ColorAlpha(PURPLE, 0.5f + glowIntensity * 0.3f);
+    
+    DrawRectangleRec(portalBox, portalColor);
+    DrawRectangleLinesEx(portalBox, portalHovered ? 4.0f : 2.0f, 
+                         portalHovered ? WHITE : VIOLET);
+    
+    const char* portalText = "ENTER";
+    int portalTextWidth = MeasureText(portalText, 24);
+    DrawText(portalText, 
+             static_cast<int>(portalBox.x + (portalWidth - portalTextWidth) / 2),
+             static_cast<int>(portalBox.y + (portalHeight - 24) / 2),
+             24, WHITE);
+    
+    if (portalHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Game::Instance().EnterPortal();
+    }
+    
+    // Hint at bottom
+    const char* hintText = "Click a character to select, then click the portal to start your run";
+    int hintWidth = MeasureText(hintText, 14);
+    DrawText(hintText, (Game::SCREEN_WIDTH - hintWidth) / 2, 
+             Game::SCREEN_HEIGHT - 40, 14, GRAY);
+}
+
+void UIManager::RenderRunResults(int score, int stage, int subLevel, CharacterType characterUsed) {
+    DrawRectangle(0, 0, Game::SCREEN_WIDTH, Game::SCREEN_HEIGHT,
+                  ColorAlpha(BLACK, 0.9f));
+    
+    // Title
+    const char* title = "RUN COMPLETE";
+    int titleWidth = MeasureText(title, 50);
+    DrawText(title, (Game::SCREEN_WIDTH - titleWidth) / 2, 100, 50, RED);
+    
+    // Character used
+    CharacterData charData = Player::GetCharacterData(characterUsed);
+    char charText[64];
+    snprintf(charText, sizeof(charText), "Character: %s", charData.name.c_str());
+    int charWidth = MeasureText(charText, 24);
+    DrawText(charText, (Game::SCREEN_WIDTH - charWidth) / 2, 200, 24, LIGHTGRAY);
+    
+    // Stats box
+    int boxWidth = 300;
+    int boxHeight = 150;
+    int boxX = (Game::SCREEN_WIDTH - boxWidth) / 2;
+    int boxY = 260;
+    
+    DrawRectangle(boxX, boxY, boxWidth, boxHeight, Color{40, 40, 60, 255});
+    DrawRectangleLines(boxX, boxY, boxWidth, boxHeight, WHITE);
+    
+    // Level reached
+    char levelText[64];
+    snprintf(levelText, sizeof(levelText), "Reached: Level %d-%d", stage, subLevel);
+    int levelWidth = MeasureText(levelText, 22);
+    DrawText(levelText, (Game::SCREEN_WIDTH - levelWidth) / 2, boxY + 30, 22, WHITE);
+    
+    // Score
+    char scoreText[64];
+    snprintf(scoreText, sizeof(scoreText), "Currency Earned: %d", score);
+    int scoreWidth = MeasureText(scoreText, 22);
+    DrawText(scoreText, (Game::SCREEN_WIDTH - scoreWidth) / 2, boxY + 70, 22, GOLD);
+    
+    // Encouragement
+    DrawText("Keep improving!", (Game::SCREEN_WIDTH - MeasureText("Keep improving!", 18)) / 2,
+             boxY + 110, 18, GRAY);
+    
+    // Continue prompt
+    float alpha = (sinf(m_animTimer * 3.0f) + 1.0f) / 2.0f;
+    Color continueColor = ColorAlpha(WHITE, 0.5f + alpha * 0.5f);
+    
+    const char* continueText = "Press ENTER or SPACE to return to hub";
+    int continueWidth = MeasureText(continueText, 20);
+    DrawText(continueText, (Game::SCREEN_WIDTH - continueWidth) / 2, 
+             Game::SCREEN_HEIGHT - 100, 20, continueColor);
 }

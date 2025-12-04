@@ -106,4 +106,64 @@ namespace Abilities {
             }
         );
     }
+    
+    std::unique_ptr<Ability> CreateExplosion() {
+        return std::make_unique<Ability>(
+            "Explosion",
+            4.0f,   // cooldown
+            30,     // energy cost
+            [](Player* player) {
+                if (!player) return;
+                
+                // Heavy AoE damage around player
+                EnemyManager* enemies = Game::Instance().GetEnemies();
+                if (!enemies) return;
+                
+                float explosionRadius = 100.0f;
+                int explosionDamage = 50;
+                
+                for (auto& enemy : enemies->GetEnemies()) {
+                    if (!enemy || enemy->IsDead()) continue;
+                    
+                    float dist = Vector2Distance(player->GetPosition(), 
+                                                  enemy->GetPosition());
+                    if (dist <= explosionRadius) {
+                        enemy->TakeDamage(explosionDamage);
+                    }
+                }
+                
+                // Visual effect would go here (explosion effect)
+            }
+        );
+    }
+    
+    std::unique_ptr<Ability> CreateFlashbang() {
+        return std::make_unique<Ability>(
+            "Flashbang",
+            5.0f,   // cooldown
+            25,     // energy cost
+            [](Player* player) {
+                if (!player) return;
+                
+                // Immobilize enemies within radius
+                EnemyManager* enemies = Game::Instance().GetEnemies();
+                if (!enemies) return;
+                
+                float flashRadius = 150.0f;
+                float stunDuration = 3.0f;
+                
+                for (auto& enemy : enemies->GetEnemies()) {
+                    if (!enemy || enemy->IsDead()) continue;
+                    
+                    float dist = Vector2Distance(player->GetPosition(), 
+                                                  enemy->GetPosition());
+                    if (dist <= flashRadius) {
+                        enemy->Immobilize(stunDuration);
+                    }
+                }
+                
+                // Visual effect would go here (flash effect)
+            }
+        );
+    }
 }

@@ -36,4 +36,10 @@ namespace Abilities {
     
     // Mage: Arcane Burst - AoE damage around player
     std::unique_ptr<Ability> CreateArcaneBurst();
+    
+    // Terrorist: Explosion - AoE explosion around player dealing heavy damage
+    std::unique_ptr<Ability> CreateExplosion();
+    
+    // Counter-Terrorist: Flashbang - Immobilize enemies within a radius
+    std::unique_ptr<Ability> CreateFlashbang();
 }

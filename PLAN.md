@@ -30,7 +30,14 @@ A fast-paced, top-down dungeon crawler inspired by Soul Knight. Easy to pick up,
 
 ## 3. MVP Scope
 ### Characters (1–2)
-Basic passive and active ability.
+~~Basic passive and active ability.~~ ✅
+- Terrorist: Pistol + Explosion (AoE damage)
+- Counter-Terrorist: Burst Rifle + Flashbang (immobilize enemies)
+
+### Hub Area ✅
+- Character selection
+- Portal to start run
+- Return after death with run results
 
 ### Weapons
 5–8 weapons covering basic archetypes:
@@ -44,6 +51,8 @@ SMG (rapid fire)
 Magic wand (piercing shot)
 
 Heavy cannon (slow, strong)
+
+Burst Rifle (3-round burst) ✅
 
 Simple auto-targeting.
 

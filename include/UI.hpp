@@ -25,6 +25,8 @@ public:
     void RenderGameOver(int score);
     void RenderFloorClear(const std::vector<std::pair<std::string, std::function<void()>>>& buffs);
     void RenderBuffSelection(const std::vector<BuffData>& buffs);
+    void RenderHub(CharacterType selectedCharacter);
+    void RenderRunResults(int score, int stage, int subLevel, CharacterType characterUsed);
     
     // Shop
     void RenderShop();

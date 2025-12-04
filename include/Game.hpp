@@ -14,10 +14,12 @@ class UIManager;
 
 enum class GameState {
     MENU,
-    BUFF_SELECT,  // Initial buff selection before gameplay
+    HUB,              // Hub area with character selection and portal
+    BUFF_SELECT,      // Initial buff selection before gameplay
     PLAYING,
     PAUSED,
     GAME_OVER,
+    RUN_RESULTS,      // Show run results after death
     FLOOR_CLEAR
 };
 
@@ -41,6 +43,9 @@ public:
     
     // Game flow
     void StartGameWithBuff(int buffIndex);
+    void SelectCharacter(CharacterType type);
+    void EnterPortal();  // Start run from hub
+    void ReturnToHub();  // Return to hub after run results
     
     // Screen dimensions
     static constexpr int SCREEN_WIDTH = 1280;
@@ -59,11 +64,26 @@ private:
     void CheckCollisions();
     void PrepareNewGame();
     void StartNewGame();
-    void NextFloor();
+    void NextLevel();    // Progress to next sub-level (or next stage)
+    void InitHub();      // Initialize hub state
+    void CheckPortalEntry();  // Check if player enters portal
+    void ShowBuffSelection(); // Show buff selection screen
     
     GameState m_state = GameState::MENU;
     float m_deltaTime = 0.0f;
     bool m_running = false;
+    
+    // Hub state
+    CharacterType m_selectedCharacter = CharacterType::TERRORIST;
+    Rectangle m_portalBounds = {0};
+    std::vector<Rectangle> m_characterSelectBounds;
+    
+    // Level tracking
+    int m_currentStage = 1;
+    int m_currentSubLevel = 1;
+    
+    // Input blocking (to prevent shooting when clicking UI)
+    bool m_blockInputThisFrame = false;
     
     std::unique_ptr<Player> m_player;
     std::unique_ptr<DungeonManager> m_dungeon;

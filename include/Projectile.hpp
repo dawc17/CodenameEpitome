@@ -6,7 +6,8 @@
 class Projectile : public Entity {
 public:
     Projectile(Vector2 pos, Vector2 dir, float speed, int damage, 
-               bool playerOwned, bool piercing = false, Color color = WHITE);
+               bool playerOwned, bool piercing = false, Color color = WHITE,
+               float size = 6.0f);
     ~Projectile() override = default;
     
     void Update(float dt) override;
@@ -38,7 +39,8 @@ public:
     void Clear();
     
     void SpawnProjectile(Vector2 pos, Vector2 dir, float speed, int damage,
-                         bool playerOwned, bool piercing = false, Color color = WHITE);
+                         bool playerOwned, bool piercing = false, Color color = WHITE,
+                         float size = 6.0f);
     
     // Returns all projectiles for collision checking
     std::vector<Projectile>& GetProjectiles() { return m_projectiles; }

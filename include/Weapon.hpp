@@ -8,7 +8,8 @@ enum class WeaponType {
     SHOTGUN,
     SMG,
     MAGIC_WAND,
-    HEAVY_CANNON
+    HEAVY_CANNON,
+    BURST_RIFLE
 };
 
 struct WeaponData {
@@ -22,6 +23,8 @@ struct WeaponData {
     bool piercing;          // for magic wand
     int energyCost;
     Color projectileColor;
+    float projectileSize;   // radius of the projectile
+    float burstDelay;       // delay between shots in a burst (0 = simultaneous)
 };
 
 class Weapon {
@@ -45,10 +48,18 @@ public:
     static WeaponData CreateSMGData();
     static WeaponData CreateMagicWandData();
     static WeaponData CreateHeavyCannonData();
+    static WeaponData CreateBurstRifleData();
     
 protected:
     virtual void SpawnProjectiles(Vector2 position, Vector2 direction);
+    void SpawnSingleProjectile(Vector2 position, Vector2 direction, float angleOffset = 0.0f);
     
     WeaponData m_data;
     float m_cooldown = 0.0f;
+    
+    // Burst fire support
+    int m_burstShotsRemaining = 0;
+    float m_burstTimer = 0.0f;
+    Vector2 m_burstPosition = {0, 0};
+    Vector2 m_burstDirection = {0, 0};
 };

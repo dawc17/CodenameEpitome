@@ -67,6 +67,12 @@ void Room::Generate(unsigned int seed) {
     // Set player spawn point (center of room for start room)
     m_playerSpawn = TileToWorld(WIDTH / 2, HEIGHT / 2);
     
+    // Set treasure position for treasure rooms
+    if (m_type == RoomType::TREASURE) {
+        m_treasurePosition = TileToWorld(WIDTH / 2, HEIGHT / 2);
+        m_treasureCollected = false;
+    }
+    
     // Generate enemy spawn points
     m_enemySpawns.clear();
     if (m_type == RoomType::NORMAL || m_type == RoomType::BOSS) {
@@ -116,6 +122,28 @@ void Room::Render(Vector2 offset) {
             // Draw grid lines
             DrawRectangleLinesEx(rect, 1, Color{60, 60, 70, 255});
         }
+    }
+    
+    // Draw treasure chest if this is a treasure room with uncollected treasure
+    if (m_type == RoomType::TREASURE && !m_treasureCollected) {
+        Vector2 chestPos = {m_treasurePosition.x + offset.x, m_treasurePosition.y + offset.y};
+        
+        // Chest body
+        DrawRectangle(static_cast<int>(chestPos.x - 20), static_cast<int>(chestPos.y - 15),
+                      40, 30, BROWN);
+        // Chest lid
+        DrawRectangle(static_cast<int>(chestPos.x - 22), static_cast<int>(chestPos.y - 20),
+                      44, 10, Color{139, 90, 43, 255});
+        // Lock
+        DrawCircle(static_cast<int>(chestPos.x), static_cast<int>(chestPos.y), 5, GOLD);
+        
+        // Sparkle effect
+        float time = static_cast<float>(GetTime());
+        float sparkle = (sinf(time * 5.0f) + 1.0f) / 2.0f;
+        DrawCircle(static_cast<int>(chestPos.x - 15 + sparkle * 5), 
+                   static_cast<int>(chestPos.y - 25), 3, ColorAlpha(GOLD, sparkle));
+        DrawCircle(static_cast<int>(chestPos.x + 15 - sparkle * 5), 
+                   static_cast<int>(chestPos.y - 25), 3, ColorAlpha(GOLD, 1.0f - sparkle));
     }
 }
 
@@ -174,10 +202,12 @@ void Room::AddDoor(int direction, int connectedRoomId) {
 DungeonManager::DungeonManager() {
 }
 
-void DungeonManager::Generate(unsigned int seed, int floorNumber) {
+void DungeonManager::Generate(unsigned int seed, int stage, int subLevel) {
     Utils::SeedRNG(seed);
-    m_floorNumber = floorNumber;
+    m_stage = stage;
+    m_subLevel = subLevel;
     m_rooms.clear();
+    m_portalActive = false;
     
     GenerateLayout(seed);
     ConnectRooms();
@@ -193,7 +223,13 @@ void DungeonManager::Generate(unsigned int seed, int floorNumber) {
 
 void DungeonManager::GenerateLayout(unsigned int seed) {
     // Generate a more complex layout with both horizontal and vertical connections
-    int numRooms = 5 + m_floorNumber; // More rooms on higher floors
+    // More rooms on higher stages, fewer rooms on boss levels (just boss + start)
+    int numRooms;
+    if (IsBossLevel()) {
+        numRooms = 2; // Just start and boss
+    } else {
+        numRooms = 4 + m_stage + m_subLevel; // More rooms as you progress
+    }
     
     // Create start room at center
     m_rooms.push_back(std::make_unique<Room>(0, RoomType::START, 0, 0));
@@ -211,8 +247,8 @@ void DungeonManager::GenerateLayout(unsigned int seed) {
     for (int i = 1; i < numRooms - 1; ++i) {
         RoomType type = RoomType::NORMAL;
         
-        // Occasional treasure room
-        if (Utils::RandomFloat(0, 1) < 0.15f) {
+        // Occasional treasure room (not on boss levels)
+        if (!IsBossLevel() && Utils::RandomFloat(0, 1) < 0.15f) {
             type = RoomType::TREASURE;
         }
         
@@ -274,6 +310,9 @@ void DungeonManager::GenerateLayout(unsigned int seed) {
     }
     
     // Create boss/exit room at the last position
+    // On boss levels (X-5), create actual boss room, otherwise exit room
+    RoomType finalRoomType = IsBossLevel() ? RoomType::BOSS : RoomType::EXIT;
+    
     // Find a position adjacent to the current room that's not occupied
     bool bossPlaced = false;
     for (int dir = 0; dir < 4; ++dir) {
@@ -289,7 +328,7 @@ void DungeonManager::GenerateLayout(unsigned int seed) {
         }
         
         if (!occupied) {
-            m_rooms.push_back(std::make_unique<Room>(numRooms - 1, RoomType::EXIT, newX, newY));
+            m_rooms.push_back(std::make_unique<Room>(numRooms - 1, finalRoomType, newX, newY));
             bossPlaced = true;
             break;
         }
@@ -297,7 +336,7 @@ void DungeonManager::GenerateLayout(unsigned int seed) {
     
     if (!bossPlaced) {
         // Fallback to adjacent to start
-        m_rooms.push_back(std::make_unique<Room>(numRooms - 1, RoomType::EXIT, 1, 1));
+        m_rooms.push_back(std::make_unique<Room>(numRooms - 1, finalRoomType, 1, 1));
     }
 }
 
@@ -363,6 +402,27 @@ void DungeonManager::Update(float dt) {
 void DungeonManager::Render() {
     if (m_currentRoom) {
         m_currentRoom->Render({0, 0});
+        
+        // Draw portal if active
+        if (m_portalActive) {
+            // Animated portal effect
+            float time = static_cast<float>(GetTime());
+            float pulse = (sinf(time * 4.0f) + 1.0f) / 2.0f;
+            
+            // Outer glow
+            DrawCircleV(m_portalPosition, 45.0f + pulse * 5.0f, ColorAlpha(PURPLE, 0.3f));
+            DrawCircleV(m_portalPosition, 35.0f + pulse * 3.0f, ColorAlpha(VIOLET, 0.5f));
+            
+            // Core
+            DrawCircleV(m_portalPosition, 25.0f, PURPLE);
+            DrawCircleV(m_portalPosition, 18.0f, ColorAlpha(WHITE, 0.7f + pulse * 0.3f));
+            
+            // Text
+            const char* text = "NEXT";
+            int textWidth = MeasureText(text, 14);
+            DrawText(text, static_cast<int>(m_portalPosition.x - textWidth/2),
+                     static_cast<int>(m_portalPosition.y - 7), 14, WHITE);
+        }
     }
 }
 
@@ -437,6 +497,32 @@ bool DungeonManager::CheckDoorCollision(Vector2 worldPos, int& roomId, int& dire
             direction = door.direction;
             return true;
         }
+    }
+    return false;
+}
+
+bool DungeonManager::CheckPortalCollision(Vector2 worldPos) const {
+    if (!m_portalActive) return false;
+    
+    float dist = Vector2Distance(worldPos, m_portalPosition);
+    return dist < 40.0f;
+}
+
+void DungeonManager::ActivatePortal() {
+    if (!m_currentRoom) return;
+    
+    m_portalActive = true;
+    // Portal spawns in center of current room
+    m_portalPosition = m_currentRoom->GetPlayerSpawnPoint();
+}
+
+bool DungeonManager::CheckTreasureCollision(Vector2 worldPos) {
+    if (!m_currentRoom || !m_currentRoom->HasTreasure()) return false;
+    
+    float dist = Vector2Distance(worldPos, m_currentRoom->GetTreasurePosition());
+    if (dist < 30.0f) {
+        m_currentRoom->CollectTreasure();
+        return true;
     }
     return false;
 }
