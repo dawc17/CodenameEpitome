@@ -31,11 +31,22 @@ struct CharacterStats {
     float cooldownMultiplier = 1.0f;  // For ability cooldown reduction
 };
 
+// Passive ability types
+enum class PassiveType {
+    NONE,
+    EXPLOSIVE_ROUNDS,    // Terrorist: kills have 20% chance to explode
+    TACTICAL_RELOAD      // Counter-Terrorist: reloading restores 10 energy
+};
+
 // Character data definitions
 struct CharacterData {
     CharacterType type;
     std::string name;
     std::string description;
+    std::string passiveName;
+    std::string passiveDescription;
+    std::string lore;
+    PassiveType passive;
     CharacterStats stats;
     Color color;
 };
@@ -68,16 +79,27 @@ public:
     void EquipWeapon(std::unique_ptr<Weapon> weapon);
     void SetAbility(std::unique_ptr<Ability> ability);
     
-    // Currency
+    // Run Currency (lost on death)
     int GetRunCurrency() const { return m_runCurrency; }
     void AddRunCurrency(int amount) { m_runCurrency += amount; }
     bool SpendRunCurrency(int amount);
+    
+    // Meta Currency (persists between runs)
+    static int GetMetaCurrency() { return s_metaCurrency; }
+    static void AddMetaCurrency(int amount) { s_metaCurrency += amount; }
+    static bool SpendMetaCurrency(int amount);
+    
+    // Passive ability
+    PassiveType GetPassive() const { return m_passive; }
+    void TriggerPassiveOnKill();
     
     // Buffs
     void ApplyBuff(const BuffData& buff);
     CharacterStats& GetStats() { return m_stats; }
     static std::vector<BuffData> GetStartingBuffs();
+    static std::vector<BuffData> GetFloorBuffs();
     static std::vector<BuffData> GetRandomBuffs(int count);
+    static std::vector<BuffData> GetRandomFloorBuffs(int count);
     
     // Auto-aim
     Vector2 GetAimDirection() const { return m_aimDirection; }
@@ -98,9 +120,13 @@ private:
     
     CharacterStats m_stats;
     CharacterType m_characterType = CharacterType::TERRORIST;
+    PassiveType m_passive = PassiveType::NONE;
     int m_health = 100;
     int m_energy = 100;
     int m_runCurrency = 0;
+    
+    // Meta currency persists between runs (static)
+    static int s_metaCurrency;
     
     std::unique_ptr<Weapon> m_weapon;
     std::unique_ptr<Ability> m_ability;

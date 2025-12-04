@@ -4,6 +4,21 @@
 #include <vector>
 #include <memory>
 #include <random>
+#include <string>
+#include <functional>
+
+// Forward declaration
+class Player;
+
+// Shop item for shop rooms
+struct ShopItem {
+    std::string name;
+    std::string description;
+    int cost;
+    Vector2 position;
+    bool purchased = false;
+    std::function<void(Player*)> applyFunc;
+};
 
 enum class RoomType {
     START,
@@ -66,6 +81,10 @@ public:
     bool HasTreasure() const { return m_type == RoomType::TREASURE && !m_treasureCollected; }
     void CollectTreasure() { m_treasureCollected = true; }
     
+    // Shop items
+    std::vector<ShopItem>& GetShopItems() { return m_shopItems; }
+    bool TryPurchaseItem(int index, Player* player);
+    
     // Room dimensions
     static constexpr int WIDTH = 15;
     static constexpr int HEIGHT = 11;
@@ -84,6 +103,7 @@ private:
     Vector2 m_playerSpawn;
     Vector2 m_treasurePosition;
     bool m_treasureCollected = false;
+    std::vector<ShopItem> m_shopItems;
 };
 
 class DungeonManager {
@@ -108,6 +128,7 @@ public:
     bool CheckDoorCollision(Vector2 worldPos, int& roomId, int& direction);
     bool CheckPortalCollision(Vector2 worldPos) const;
     bool CheckTreasureCollision(Vector2 worldPos);  // Returns true and collects treasure if touched
+    int CheckShopItemCollision(Vector2 worldPos);   // Returns item index or -1
     
     // Floor info - Soul Knight style (stage-sublevel, e.g., 1-1, 1-2... 1-5, 2-1...)
     int GetStage() const { return m_stage; }

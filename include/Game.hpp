@@ -46,6 +46,7 @@ public:
     void SelectCharacter(CharacterType type);
     void EnterPortal();  // Start run from hub
     void ReturnToHub();  // Return to hub after run results
+    void ApplyFloorBuff(int buffIndex); // Apply selected floor buff and continue
     
     // Debug menu
     bool IsDebugMenuOpen() const { return m_debugMenuOpen; }
@@ -77,6 +78,7 @@ private:
     void InitHub();      // Initialize hub state
     void CheckPortalEntry();  // Check if player enters portal
     void ShowBuffSelection(); // Show buff selection screen
+    void ShowFloorBuffSelection(); // Show floor clear buff selection
     
     GameState m_state = GameState::MENU;
     float m_deltaTime = 0.0f;
@@ -96,6 +98,9 @@ private:
     
     // Debug menu
     bool m_debugMenuOpen = false;
+    
+    // Floor buff selection (true when selecting after floor clear, false for starting buffs)
+    bool m_isFloorBuffSelection = false;
     
     std::unique_ptr<Player> m_player;
     std::unique_ptr<DungeonManager> m_dungeon;

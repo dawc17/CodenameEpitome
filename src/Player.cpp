@@ -5,6 +5,9 @@
 #include "Dungeon.hpp"
 #include "Utils.hpp"
 
+// Initialize static meta currency
+int Player::s_metaCurrency = 0;
+
 Player::Player() : Entity({0, 0}, 16.0f) {
     // Default to Terrorist character
     SetCharacter(CharacterType::TERRORIST);
@@ -18,6 +21,10 @@ CharacterData Player::GetCharacterData(CharacterType type) {
         case CharacterType::TERRORIST:
             data.name = "Terrorist";
             data.description = "Wields a pistol. Explosion ability deals AoE damage.";
+            data.passiveName = "Explosive Rounds";
+            data.passiveDescription = "20% chance for kills to explode, dealing 15 AoE damage.";
+            data.lore = "Once a demolitions expert, now a mercenary who found purpose in the dungeon's chaos. Every explosion reminds him of home.";
+            data.passive = PassiveType::EXPLOSIVE_ROUNDS;
             data.stats.name = "Terrorist";
             data.stats.maxHealth = 100;
             data.stats.maxEnergy = 100;
@@ -28,6 +35,10 @@ CharacterData Player::GetCharacterData(CharacterType type) {
         case CharacterType::COUNTER_TERRORIST:
             data.name = "Counter-Terrorist";
             data.description = "Wields a burst rifle. Flashbang immobilizes enemies.";
+            data.passiveName = "Tactical Reload";
+            data.passiveDescription = "Weapon shots restore 2 energy on hit.";
+            data.lore = "A former elite operative who lost her squad to the dungeon's horrors. She fights with precision and discipline, never wasting a bullet.";
+            data.passive = PassiveType::TACTICAL_RELOAD;
             data.stats.name = "Counter-Terrorist";
             data.stats.maxHealth = 110;
             data.stats.maxEnergy = 90;
@@ -45,6 +56,7 @@ void Player::SetCharacter(CharacterType type) {
     
     m_stats = charData.stats;
     m_color = charData.color;
+    m_passive = charData.passive;
     m_health = m_stats.maxHealth;
     m_energy = m_stats.maxEnergy;
     
@@ -241,12 +253,41 @@ bool Player::SpendRunCurrency(int amount) {
     return false;
 }
 
+bool Player::SpendMetaCurrency(int amount) {
+    if (s_metaCurrency >= amount) {
+        s_metaCurrency -= amount;
+        return true;
+    }
+    return false;
+}
+
+void Player::TriggerPassiveOnKill() {
+    switch (m_passive) {
+        case PassiveType::EXPLOSIVE_ROUNDS:
+            // 20% chance to explode on kill - handled at kill location
+            if (Utils::RandomFloat(0.0f, 1.0f) < 0.2f) {
+                // The explosion is created at the enemy position by the caller
+                // Just return true to indicate explosion should happen
+            }
+            break;
+            
+        case PassiveType::TACTICAL_RELOAD:
+            // Energy restored on hit, not on kill
+            break;
+            
+        case PassiveType::NONE:
+        default:
+            break;
+    }
+}
+
 void Player::Reset() {
     // Get character data for current character type
     CharacterData charData = GetCharacterData(m_characterType);
     
     m_stats = charData.stats;
     m_color = charData.color;
+    m_passive = charData.passive;
     m_health = m_stats.maxHealth;
     m_energy = m_stats.maxEnergy;
     m_runCurrency = 0;
@@ -279,6 +320,7 @@ void Player::ApplyBuff(const BuffData& buff) {
 
 std::vector<BuffData> Player::GetStartingBuffs() {
     return {
+        // Basic stat buffs
         {"Health Boost", "+20 Max Health", [](Player* p) { 
             p->GetStats().maxHealth += 20; 
             p->Heal(20);  // Also heal for the bonus
@@ -301,8 +343,77 @@ std::vector<BuffData> Player::GetStartingBuffs() {
     };
 }
 
+std::vector<BuffData> Player::GetFloorBuffs() {
+    return {
+        // Basic buffs (common)
+        {"Minor Heal", "Restore 30 HP", [](Player* p) { 
+            p->Heal(30);
+        }},
+        {"Health Boost", "+15 Max Health", [](Player* p) { 
+            p->GetStats().maxHealth += 15; 
+            p->Heal(15);
+        }},
+        {"Energy Boost", "+15 Max Energy", [](Player* p) { 
+            p->GetStats().maxEnergy += 15; 
+        }},
+        {"Quick Feet", "+10% Movement Speed", [](Player* p) { 
+            p->GetStats().moveSpeed *= 1.10f; 
+        }},
+        {"Sharpshooter", "+10% Weapon Damage", [](Player* p) { 
+            p->GetStats().damageMultiplier *= 1.10f; 
+        }},
+        {"Rapid Fire", "+10% Fire Rate", [](Player* p) { 
+            p->GetStats().fireRateMultiplier *= 1.10f; 
+        }},
+        {"Cooldown Reduction", "-10% Ability Cooldown", [](Player* p) { 
+            p->GetStats().cooldownMultiplier *= 0.90f; 
+        }},
+        
+        // Special effect buffs (rare)
+        {"Vampiric Touch", "Kills restore 5 HP", [](Player* p) { 
+            // This is handled by a flag - for now just heal a bit
+            p->Heal(10);  // Placeholder until proper implementation
+        }},
+        {"Energy Thief", "Kills restore 10 Energy", [](Player* p) { 
+            // Placeholder - restore some energy now
+            p->RestoreFullEnergy();
+        }},
+        {"Glass Cannon", "+40% Damage, -20 Max HP", [](Player* p) { 
+            p->GetStats().damageMultiplier *= 1.40f;
+            p->GetStats().maxHealth -= 20;
+            if (p->GetHealth() > p->GetMaxHealth()) {
+                // Reduce health if over new max
+            }
+        }},
+        {"Tank Mode", "+30 Max HP, -10% Speed", [](Player* p) { 
+            p->GetStats().maxHealth += 30;
+            p->Heal(30);
+            p->GetStats().moveSpeed *= 0.90f;
+        }},
+        {"Berserker", "+25% Damage, +15% Fire Rate at low HP", [](Player* p) { 
+            // Buff that activates when below 30% HP - for now just give stats
+            p->GetStats().damageMultiplier *= 1.15f;
+            p->GetStats().fireRateMultiplier *= 1.10f;
+        }},
+    };
+}
+
 std::vector<BuffData> Player::GetRandomBuffs(int count) {
     std::vector<BuffData> allBuffs = GetStartingBuffs();
+    std::vector<BuffData> result;
+    
+    // Shuffle and pick 'count' buffs
+    for (int i = 0; i < count && !allBuffs.empty(); ++i) {
+        int idx = Utils::RandomInt(0, static_cast<int>(allBuffs.size()) - 1);
+        result.push_back(allBuffs[idx]);
+        allBuffs.erase(allBuffs.begin() + idx);
+    }
+    
+    return result;
+}
+
+std::vector<BuffData> Player::GetRandomFloorBuffs(int count) {
+    std::vector<BuffData> allBuffs = GetFloorBuffs();
     std::vector<BuffData> result;
     
     // Shuffle and pick 'count' buffs

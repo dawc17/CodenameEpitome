@@ -282,6 +282,71 @@ void UIManager::RenderBuffSelection(const std::vector<BuffData>& buffs) {
              Game::SCREEN_HEIGHT - 80, 18, ColorAlpha(WHITE, 0.5f + alpha * 0.5f));
 }
 
+void UIManager::RenderFloorBuffSelection(const std::vector<BuffData>& buffs) {
+    // Semi-transparent overlay over the game world
+    DrawRectangle(0, 0, Game::SCREEN_WIDTH, Game::SCREEN_HEIGHT,
+                  ColorAlpha(BLACK, 0.85f));
+    
+    const char* titleText = "FLOOR CLEARED!";
+    int titleWidth = MeasureText(titleText, 50);
+    DrawText(titleText, (Game::SCREEN_WIDTH - titleWidth) / 2, 60, 50, GREEN);
+    
+    const char* subtitleText = "Choose a buff to continue";
+    int subtitleWidth = MeasureText(subtitleText, 22);
+    DrawText(subtitleText, (Game::SCREEN_WIDTH - subtitleWidth) / 2, 130, 22, LIGHTGRAY);
+    
+    // Draw buff options
+    int buffWidth = 280;
+    int buffHeight = 130;
+    int spacing = 40;
+    int totalWidth = static_cast<int>(buffs.size()) * buffWidth + 
+                     (static_cast<int>(buffs.size()) - 1) * spacing;
+    int startX = (Game::SCREEN_WIDTH - totalWidth) / 2;
+    int y = 200;
+    
+    for (size_t i = 0; i < buffs.size(); ++i) {
+        Rectangle buffRect = {
+            static_cast<float>(startX + i * (buffWidth + spacing)),
+            static_cast<float>(y),
+            static_cast<float>(buffWidth),
+            static_cast<float>(buffHeight)
+        };
+        
+        bool hovered = CheckCollisionPointRec(GetMousePosition(), buffRect);
+        Color bgColor = hovered ? Color{50, 100, 70, 255} : Color{30, 60, 45, 255};
+        Color borderColor = hovered ? GREEN : Color{80, 140, 100, 255};
+        
+        DrawRectangleRec(buffRect, bgColor);
+        DrawRectangleLinesEx(buffRect, hovered ? 3.0f : 2.0f, borderColor);
+        
+        // Draw buff name centered
+        int nameWidth = MeasureText(buffs[i].name.c_str(), 24);
+        DrawText(buffs[i].name.c_str(),
+                 static_cast<int>(buffRect.x + (buffWidth - nameWidth) / 2),
+                 static_cast<int>(buffRect.y + 30),
+                 24, WHITE);
+        
+        // Draw buff description
+        int descWidth = MeasureText(buffs[i].description.c_str(), 16);
+        DrawText(buffs[i].description.c_str(),
+                 static_cast<int>(buffRect.x + (buffWidth - descWidth) / 2),
+                 static_cast<int>(buffRect.y + 75),
+                 16, LIGHTGRAY);
+        
+        // Handle click
+        if (hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            Game::Instance().ApplyFloorBuff(static_cast<int>(i));
+        }
+    }
+    
+    // Instructions at bottom
+    const char* instructText = "Click a buff to continue to the next floor";
+    int instructWidth = MeasureText(instructText, 18);
+    float alpha = (sinf(m_animTimer * 2.0f) + 1.0f) / 2.0f;
+    DrawText(instructText, (Game::SCREEN_WIDTH - instructWidth) / 2, 
+             Game::SCREEN_HEIGHT - 80, 18, ColorAlpha(WHITE, 0.5f + alpha * 0.5f));
+}
+
 void UIManager::DrawHealthBar(Vector2 pos, float width, float height,
                                int current, int max, Color fillColor) {
     // Background
@@ -350,18 +415,18 @@ void UIManager::RenderHub(CharacterType selectedCharacter) {
     // Title
     const char* title = "THE HUB";
     int titleWidth = MeasureText(title, 50);
-    DrawText(title, (Game::SCREEN_WIDTH - titleWidth) / 2, 40, 50, WHITE);
+    DrawText(title, (Game::SCREEN_WIDTH - titleWidth) / 2, 20, 50, WHITE);
     
     const char* subtitle = "Select your character, then enter the portal";
     int subtitleWidth = MeasureText(subtitle, 18);
-    DrawText(subtitle, (Game::SCREEN_WIDTH - subtitleWidth) / 2, 100, 18, LIGHTGRAY);
+    DrawText(subtitle, (Game::SCREEN_WIDTH - subtitleWidth) / 2, 75, 18, LIGHTGRAY);
     
-    // Character selection boxes
-    float boxWidth = 200;
-    float boxHeight = 280;
+    // Character selection boxes - larger to fit passive info
+    float boxWidth = 280;
+    float boxHeight = 380;
     float spacing = 60;
     float startX = (Game::SCREEN_WIDTH - (2 * boxWidth + spacing)) / 2.0f;
-    float y = 180;
+    float y = 110;
     
     // Character 1: Terrorist
     CharacterData terroristData = Player::GetCharacterData(CharacterType::TERRORIST);
@@ -377,27 +442,47 @@ void UIManager::RenderHub(CharacterType selectedCharacter) {
     
     // Character icon (circle)
     DrawCircle(static_cast<int>(terroristBox.x + boxWidth/2), 
-               static_cast<int>(terroristBox.y + 60), 35, terroristData.color);
+               static_cast<int>(terroristBox.y + 50), 35, terroristData.color);
     
     // Name
-    int nameWidth = MeasureText(terroristData.name.c_str(), 22);
+    int nameWidth = MeasureText(terroristData.name.c_str(), 24);
     DrawText(terroristData.name.c_str(), 
              static_cast<int>(terroristBox.x + (boxWidth - nameWidth) / 2),
-             static_cast<int>(terroristBox.y + 110), 22, WHITE);
+             static_cast<int>(terroristBox.y + 95), 24, WHITE);
     
     // Stats
-    DrawText("HP: 100  Energy: 100", static_cast<int>(terroristBox.x + 20),
-             static_cast<int>(terroristBox.y + 145), 14, LIGHTGRAY);
-    DrawText("Weapon: Pistol", static_cast<int>(terroristBox.x + 20),
-             static_cast<int>(terroristBox.y + 165), 14, LIGHTGRAY);
-    DrawText("Skill: Explosion", static_cast<int>(terroristBox.x + 20),
-             static_cast<int>(terroristBox.y + 185), 14, ORANGE);
+    char statsText[64];
+    snprintf(statsText, sizeof(statsText), "HP: %d  Energy: %d", 
+             terroristData.stats.maxHealth, terroristData.stats.maxEnergy);
+    DrawText(statsText, static_cast<int>(terroristBox.x + 15),
+             static_cast<int>(terroristBox.y + 130), 14, LIGHTGRAY);
+    DrawText("Weapon: Pistol", static_cast<int>(terroristBox.x + 15),
+             static_cast<int>(terroristBox.y + 148), 14, LIGHTGRAY);
+    DrawText("Skill: Explosion", static_cast<int>(terroristBox.x + 15),
+             static_cast<int>(terroristBox.y + 166), 14, ORANGE);
     
-    // Description
-    DrawText("AoE damage around", static_cast<int>(terroristBox.x + 20),
-             static_cast<int>(terroristBox.y + 220), 12, GRAY);
-    DrawText("self", static_cast<int>(terroristBox.x + 20),
-             static_cast<int>(terroristBox.y + 235), 12, GRAY);
+    // Passive ability
+    DrawLine(static_cast<int>(terroristBox.x + 15), static_cast<int>(terroristBox.y + 190),
+             static_cast<int>(terroristBox.x + boxWidth - 15), static_cast<int>(terroristBox.y + 190), GRAY);
+    DrawText("PASSIVE:", static_cast<int>(terroristBox.x + 15),
+             static_cast<int>(terroristBox.y + 200), 12, GOLD);
+    DrawText(terroristData.passiveName.c_str(), static_cast<int>(terroristBox.x + 15),
+             static_cast<int>(terroristBox.y + 215), 14, YELLOW);
+    DrawText(terroristData.passiveDescription.c_str(), static_cast<int>(terroristBox.x + 15),
+             static_cast<int>(terroristBox.y + 235), 11, LIGHTGRAY);
+    
+    // Lore
+    DrawLine(static_cast<int>(terroristBox.x + 15), static_cast<int>(terroristBox.y + 270),
+             static_cast<int>(terroristBox.x + boxWidth - 15), static_cast<int>(terroristBox.y + 270), GRAY);
+    DrawText("LORE:", static_cast<int>(terroristBox.x + 15),
+             static_cast<int>(terroristBox.y + 280), 12, Color{150, 150, 180, 255});
+    // Word wrap lore text (simple approach - split into lines)
+    const char* lore1 = "Once a demolitions";
+    const char* lore2 = "expert, now fights";
+    const char* lore3 = "for glory in chaos.";
+    DrawText(lore1, static_cast<int>(terroristBox.x + 15), static_cast<int>(terroristBox.y + 298), 11, GRAY);
+    DrawText(lore2, static_cast<int>(terroristBox.x + 15), static_cast<int>(terroristBox.y + 312), 11, GRAY);
+    DrawText(lore3, static_cast<int>(terroristBox.x + 15), static_cast<int>(terroristBox.y + 326), 11, GRAY);
     
     if (terroristHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         Game::Instance().SelectCharacter(CharacterType::TERRORIST);
@@ -417,27 +502,45 @@ void UIManager::RenderHub(CharacterType selectedCharacter) {
     
     // Character icon
     DrawCircle(static_cast<int>(ctBox.x + boxWidth/2), 
-               static_cast<int>(ctBox.y + 60), 35, ctData.color);
+               static_cast<int>(ctBox.y + 50), 35, ctData.color);
     
     // Name
-    nameWidth = MeasureText(ctData.name.c_str(), 22);
+    nameWidth = MeasureText(ctData.name.c_str(), 24);
     DrawText(ctData.name.c_str(), 
              static_cast<int>(ctBox.x + (boxWidth - nameWidth) / 2),
-             static_cast<int>(ctBox.y + 110), 22, WHITE);
+             static_cast<int>(ctBox.y + 95), 24, WHITE);
     
     // Stats
-    DrawText("HP: 110  Energy: 90", static_cast<int>(ctBox.x + 20),
-             static_cast<int>(ctBox.y + 145), 14, LIGHTGRAY);
-    DrawText("Weapon: Burst Rifle", static_cast<int>(ctBox.x + 20),
-             static_cast<int>(ctBox.y + 165), 14, LIGHTGRAY);
-    DrawText("Skill: Flashbang", static_cast<int>(ctBox.x + 20),
-             static_cast<int>(ctBox.y + 185), 14, SKYBLUE);
+    snprintf(statsText, sizeof(statsText), "HP: %d  Energy: %d", 
+             ctData.stats.maxHealth, ctData.stats.maxEnergy);
+    DrawText(statsText, static_cast<int>(ctBox.x + 15),
+             static_cast<int>(ctBox.y + 130), 14, LIGHTGRAY);
+    DrawText("Weapon: Burst Rifle", static_cast<int>(ctBox.x + 15),
+             static_cast<int>(ctBox.y + 148), 14, LIGHTGRAY);
+    DrawText("Skill: Flashbang", static_cast<int>(ctBox.x + 15),
+             static_cast<int>(ctBox.y + 166), 14, SKYBLUE);
     
-    // Description
-    DrawText("Immobilize enemies", static_cast<int>(ctBox.x + 20),
-             static_cast<int>(ctBox.y + 220), 12, GRAY);
-    DrawText("in radius", static_cast<int>(ctBox.x + 20),
-             static_cast<int>(ctBox.y + 235), 12, GRAY);
+    // Passive ability
+    DrawLine(static_cast<int>(ctBox.x + 15), static_cast<int>(ctBox.y + 190),
+             static_cast<int>(ctBox.x + boxWidth - 15), static_cast<int>(ctBox.y + 190), GRAY);
+    DrawText("PASSIVE:", static_cast<int>(ctBox.x + 15),
+             static_cast<int>(ctBox.y + 200), 12, GOLD);
+    DrawText(ctData.passiveName.c_str(), static_cast<int>(ctBox.x + 15),
+             static_cast<int>(ctBox.y + 215), 14, YELLOW);
+    DrawText(ctData.passiveDescription.c_str(), static_cast<int>(ctBox.x + 15),
+             static_cast<int>(ctBox.y + 235), 11, LIGHTGRAY);
+    
+    // Lore
+    DrawLine(static_cast<int>(ctBox.x + 15), static_cast<int>(ctBox.y + 270),
+             static_cast<int>(ctBox.x + boxWidth - 15), static_cast<int>(ctBox.y + 270), GRAY);
+    DrawText("LORE:", static_cast<int>(ctBox.x + 15),
+             static_cast<int>(ctBox.y + 280), 12, Color{150, 150, 180, 255});
+    const char* ctLore1 = "Elite operative who";
+    const char* ctLore2 = "lost her squad. Fights";
+    const char* ctLore3 = "with precision.";
+    DrawText(ctLore1, static_cast<int>(ctBox.x + 15), static_cast<int>(ctBox.y + 298), 11, GRAY);
+    DrawText(ctLore2, static_cast<int>(ctBox.x + 15), static_cast<int>(ctBox.y + 312), 11, GRAY);
+    DrawText(ctLore3, static_cast<int>(ctBox.x + 15), static_cast<int>(ctBox.y + 326), 11, GRAY);
     
     if (ctHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         Game::Instance().SelectCharacter(CharacterType::COUNTER_TERRORIST);
@@ -448,7 +551,7 @@ void UIManager::RenderHub(CharacterType selectedCharacter) {
     float portalHeight = 80;
     Rectangle portalBox = {
         (Game::SCREEN_WIDTH - portalWidth) / 2.0f,
-        static_cast<float>(Game::SCREEN_HEIGHT - 150),
+        static_cast<float>(Game::SCREEN_HEIGHT - 110),
         portalWidth,
         portalHeight
     };

@@ -118,6 +118,14 @@ void Game::Update() {
                 int treasureValue = 50 + m_currentStage * 25;
                 m_player->AddRunCurrency(treasureValue);
             }
+            
+            // Check shop item purchase
+            {
+                int shopItemIndex = m_dungeon->CheckShopItemCollision(m_player->GetPosition());
+                if (shopItemIndex >= 0 && m_dungeon->GetCurrentRoom()) {
+                    m_dungeon->GetCurrentRoom()->TryPurchaseItem(shopItemIndex, m_player.get());
+                }
+            }
             break;
             
         case GameState::PAUSED:
@@ -192,7 +200,8 @@ void Game::Render() {
             m_dungeon->Render();
             m_player->Render();
             EndMode2D();
-            // Buff selection overlay handled separately
+            // Render floor buff selection overlay
+            m_ui->RenderFloorBuffSelection(m_startingBuffs);
             break;
     }
     
@@ -441,7 +450,37 @@ void Game::NextLevel() {
 
 void Game::ShowBuffSelection() {
     m_startingBuffs = Player::GetRandomBuffs(3);
+    m_isFloorBuffSelection = false;
     m_state = GameState::BUFF_SELECT;
+}
+
+void Game::ShowFloorBuffSelection() {
+    m_startingBuffs = Player::GetRandomFloorBuffs(3);
+    m_isFloorBuffSelection = true;
+    m_state = GameState::FLOOR_CLEAR;
+}
+
+void Game::ApplyFloorBuff(int buffIndex) {
+    if (buffIndex >= 0 && buffIndex < static_cast<int>(m_startingBuffs.size())) {
+        m_player->ApplyBuff(m_startingBuffs[buffIndex]);
+    }
+    
+    // Place player at start room spawn point
+    if (m_dungeon->GetCurrentRoom()) {
+        m_player->SetPosition(m_dungeon->GetCurrentRoom()->GetPlayerSpawnPoint());
+    }
+    
+    // Spawn enemies in current room
+    if (m_dungeon->GetCurrentRoom() && !m_dungeon->GetCurrentRoom()->IsCleared()) {
+        m_enemies->SpawnEnemiesInRoom(
+            m_dungeon->GetCurrentRoom()->GetEnemySpawnPoints(),
+            m_currentStage
+        );
+    }
+    
+    m_startingBuffs.clear();
+    m_blockInputThisFrame = true;
+    m_state = GameState::PLAYING;
 }
 
 void Game::CheckPortalEntry() {
@@ -463,8 +502,8 @@ void Game::CheckPortalEntry() {
         unsigned int seed = static_cast<unsigned int>(time(nullptr));
         m_dungeon->Generate(seed, m_currentStage, m_currentSubLevel);
         
-        // Show buff selection
-        ShowBuffSelection();
+        // Show floor buff selection (different from starting buffs)
+        ShowFloorBuffSelection();
     }
 }
 

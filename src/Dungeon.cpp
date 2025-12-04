@@ -73,6 +73,63 @@ void Room::Generate(unsigned int seed) {
         m_treasureCollected = false;
     }
     
+    // Generate shop items for shop rooms
+    if (m_type == RoomType::SHOP) {
+        m_shopItems.clear();
+        
+        // Create 3 shop items
+        ShopItem healthItem;
+        healthItem.name = "Health Potion";
+        healthItem.description = "Restore 50 HP";
+        healthItem.cost = 30;
+        healthItem.position = TileToWorld(WIDTH / 2 - 3, HEIGHT / 2);
+        healthItem.purchased = false;
+        healthItem.applyFunc = [](Player* p) { p->Heal(50); };
+        m_shopItems.push_back(healthItem);
+        
+        ShopItem energyItem;
+        energyItem.name = "Energy Crystal";
+        energyItem.description = "Restore full energy";
+        energyItem.cost = 25;
+        energyItem.position = TileToWorld(WIDTH / 2, HEIGHT / 2);
+        energyItem.purchased = false;
+        energyItem.applyFunc = [](Player* p) { p->RestoreFullEnergy(); };
+        m_shopItems.push_back(energyItem);
+        
+        // Random buff item
+        ShopItem buffItem;
+        int buffType = Utils::RandomInt(0, 3);
+        switch (buffType) {
+            case 0:
+                buffItem.name = "Damage Boost";
+                buffItem.description = "+15% Damage";
+                buffItem.cost = 60;
+                buffItem.applyFunc = [](Player* p) { p->GetStats().damageMultiplier *= 1.15f; };
+                break;
+            case 1:
+                buffItem.name = "Speed Boots";
+                buffItem.description = "+10% Speed";
+                buffItem.cost = 50;
+                buffItem.applyFunc = [](Player* p) { p->GetStats().moveSpeed *= 1.10f; };
+                break;
+            case 2:
+                buffItem.name = "Max Health Up";
+                buffItem.description = "+20 Max HP";
+                buffItem.cost = 55;
+                buffItem.applyFunc = [](Player* p) { p->GetStats().maxHealth += 20; p->Heal(20); };
+                break;
+            default:
+                buffItem.name = "Fire Rate Up";
+                buffItem.description = "+10% Fire Rate";
+                buffItem.cost = 45;
+                buffItem.applyFunc = [](Player* p) { p->GetStats().fireRateMultiplier *= 1.10f; };
+                break;
+        }
+        buffItem.position = TileToWorld(WIDTH / 2 + 3, HEIGHT / 2);
+        buffItem.purchased = false;
+        m_shopItems.push_back(buffItem);
+    }
+    
     // Generate enemy spawn points
     m_enemySpawns.clear();
     if (m_type == RoomType::NORMAL || m_type == RoomType::BOSS) {
@@ -145,6 +202,45 @@ void Room::Render(Vector2 offset) {
         DrawCircle(static_cast<int>(chestPos.x + 15 - sparkle * 5), 
                    static_cast<int>(chestPos.y - 25), 3, ColorAlpha(GOLD, 1.0f - sparkle));
     }
+    
+    // Draw shop items if this is a shop room
+    if (m_type == RoomType::SHOP) {
+        for (size_t i = 0; i < m_shopItems.size(); ++i) {
+            const ShopItem& item = m_shopItems[i];
+            if (item.purchased) continue;
+            
+            Vector2 itemPos = {item.position.x + offset.x, item.position.y + offset.y};
+            
+            // Item pedestal
+            DrawRectangle(static_cast<int>(itemPos.x - 25), static_cast<int>(itemPos.y + 10),
+                          50, 10, Color{100, 100, 120, 255});
+            
+            // Item icon (colored circle)
+            Color itemColor = (i == 0) ? RED : (i == 1) ? BLUE : GREEN;
+            DrawCircle(static_cast<int>(itemPos.x), static_cast<int>(itemPos.y - 5), 15, itemColor);
+            DrawCircleLinesV({itemPos.x, itemPos.y - 5}, 15, WHITE);
+            
+            // Price tag
+            char priceText[16];
+            snprintf(priceText, sizeof(priceText), "$%d", item.cost);
+            int priceWidth = MeasureText(priceText, 14);
+            DrawText(priceText, static_cast<int>(itemPos.x - priceWidth / 2), 
+                     static_cast<int>(itemPos.y + 25), 14, GOLD);
+            
+            // Item name
+            int nameWidth = MeasureText(item.name.c_str(), 12);
+            DrawText(item.name.c_str(), static_cast<int>(itemPos.x - nameWidth / 2),
+                     static_cast<int>(itemPos.y - 35), 12, WHITE);
+        }
+        
+        // Shop sign at top of room
+        Vector2 signPos = TileToWorld(WIDTH / 2, 2);
+        signPos.x += offset.x;
+        signPos.y += offset.y;
+        DrawText("SHOP", static_cast<int>(signPos.x - 30), static_cast<int>(signPos.y - 10), 24, SKYBLUE);
+        DrawText("Walk into items to buy", static_cast<int>(signPos.x - 70), 
+                 static_cast<int>(signPos.y + 15), 12, LIGHTGRAY);
+    }
 }
 
 TileType Room::GetTile(int x, int y) const {
@@ -196,6 +292,22 @@ void Room::AddDoor(int direction, int connectedRoomId) {
     door.connectedRoomId = connectedRoomId;
     door.isOpen = false;
     m_doors.push_back(door);
+}
+
+bool Room::TryPurchaseItem(int index, Player* player) {
+    if (index < 0 || index >= static_cast<int>(m_shopItems.size())) return false;
+    
+    ShopItem& item = m_shopItems[index];
+    if (item.purchased) return false;
+    
+    if (player->SpendRunCurrency(item.cost)) {
+        item.purchased = true;
+        if (item.applyFunc) {
+            item.applyFunc(player);
+        }
+        return true;
+    }
+    return false;
 }
 
 // DungeonManager implementation
@@ -250,6 +362,10 @@ void DungeonManager::GenerateLayout(unsigned int seed) {
         // Occasional treasure room (not on boss levels)
         if (!IsBossLevel() && Utils::RandomFloat(0, 1) < 0.15f) {
             type = RoomType::TREASURE;
+        }
+        // Occasional shop room (not on boss levels, less common than treasure)
+        else if (!IsBossLevel() && Utils::RandomFloat(0, 1) < 0.12f) {
+            type = RoomType::SHOP;
         }
         
         // Try to find a valid adjacent position
@@ -525,6 +641,21 @@ bool DungeonManager::CheckTreasureCollision(Vector2 worldPos) {
         return true;
     }
     return false;
+}
+
+int DungeonManager::CheckShopItemCollision(Vector2 worldPos) {
+    if (!m_currentRoom || m_currentRoom->GetType() != RoomType::SHOP) return -1;
+    
+    auto& items = m_currentRoom->GetShopItems();
+    for (size_t i = 0; i < items.size(); ++i) {
+        if (items[i].purchased) continue;
+        
+        float dist = Vector2Distance(worldPos, items[i].position);
+        if (dist < 25.0f) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
 }
 
 void DungeonManager::RenderMinimap(float x, float y, float scale) {

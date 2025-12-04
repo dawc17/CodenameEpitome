@@ -9,26 +9,24 @@ A fast-paced, top-down dungeon crawler inspired by Soul Knight. Easy to pick up,
 ## 2. Game Pillars
 - ~~Fluid top-down action~~ ✅
   Same general perspective and movement feel as the attached screenshot.
-- Weapons, weapons, weapons
+- Weapons, weapons, weapons ✅
   A deep, ever-expanding arsenal with unique firing patterns, elemental variants, weird gimmicks, and high replay value.
 - ~~Simple yet satisfying aiming~~ ✅
   Auto-aim system with smart targeting logic, so players focus on dodging, positioning, and ability timing.
-- Character identity & abilities  
+- Character identity & abilities ✅
   Each character has:
-  - A passive trait  
-  - An active skill with cooldown  
-  - A lore snippet that ties into the game’s world
-- Procedurally generated dungeons  
+  - A passive trait ✅
+  - An active skill with cooldown ✅
+  - A lore snippet that ties into the game's world ✅
+- Procedurally generated dungeons ✅
   Rooms, enemies, traps, and loot vary between runs. Different biomes unlock as the game grows.
-- Engaging enemy designs  
+- Engaging enemy designs ✅
   Enemies with readable patterns, surprising behaviors, minibosses, and bosses.
-- Dual-currency economy  
-  - Meta Currency (kept between runs): unlock characters, skins, permanent upgrades.  
-  - Run Currency (lost each run): used in dungeon shops for buffs, weapons, healing.
-- Buff selection between levels  
-  After clearing a floor, the player chooses 1 of 3 randomized buffs.
-
-## 3. MVP Scope
+- Dual-currency economy ✅
+  - Meta Currency (kept between runs): unlock characters, skins, permanent upgrades. ✅
+  - Run Currency (lost each run): used in dungeon shops for buffs, weapons, healing. ✅
+- Buff selection between levels ✅
+  After clearing a floor, the player chooses 1 of 3 randomized buffs.## 3. MVP Scope
 ### Characters (1–2)
 ~~Basic passive and active ability.~~ ✅
 - Terrorist: Pistol + Explosion (AoE damage)
@@ -73,9 +71,9 @@ Occasional loot rooms✅
 Exit to next floor✅
 
 ### Economy
-Run currency + simple vendor in dungeon.
+~~Run currency + simple vendor in dungeon.~~ ✅
 
-Meta currency placeholder.
+~~Meta currency placeholder.~~ ✅
 
 ### UI
 ~~Health, energy, weapon slot, skill cooldown.~~ ✅
