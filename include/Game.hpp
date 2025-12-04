@@ -47,6 +47,15 @@ public:
     void EnterPortal();  // Start run from hub
     void ReturnToHub();  // Return to hub after run results
     
+    // Debug menu
+    bool IsDebugMenuOpen() const { return m_debugMenuOpen; }
+    void ToggleDebugMenu() { m_debugMenuOpen = !m_debugMenuOpen; }
+    void DebugEquipWeapon(int weaponIndex);
+    void DebugSpawnEnemy(int enemyType);
+    void DebugClearEnemies();
+    void DebugChangeCharacter(CharacterType type);
+    void DebugEndGame();
+    
     // Screen dimensions
     static constexpr int SCREEN_WIDTH = 1280;
     static constexpr int SCREEN_HEIGHT = 720;
@@ -84,6 +93,9 @@ private:
     
     // Input blocking (to prevent shooting when clicking UI)
     bool m_blockInputThisFrame = false;
+    
+    // Debug menu
+    bool m_debugMenuOpen = false;
     
     std::unique_ptr<Player> m_player;
     std::unique_ptr<DungeonManager> m_dungeon;

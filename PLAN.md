@@ -42,19 +42,19 @@ A fast-paced, top-down dungeon crawler inspired by Soul Knight. Easy to pick up,
 ### Weapons
 5–8 weapons covering basic archetypes:
 
-Pistol (single shot)
+Pistol (single shot)✅
 
-Shotgun (spread)
+Shotgun (spread)✅
 
-SMG (rapid fire)
+SMG (rapid fire)✅
 
-Magic wand (piercing shot)
+Magic wand (piercing shot)✅
 
-Heavy cannon (slow, strong)
+Heavy cannon (slow, strong)✅
 
 Burst Rifle (3-round burst) ✅
 
-Simple auto-targeting.
+Simple auto-targeting.✅
 
 ### Enemies
 ~~3–4 enemies + one miniboss.~~ ✅
@@ -68,9 +68,9 @@ Simple auto-targeting.
 
 ~~Random enemy placement~~ ✅
 
-Occasional loot rooms
+Occasional loot rooms✅
 
-Exit to next floor
+Exit to next floor✅
 
 ### Economy
 Run currency + simple vendor in dungeon.
@@ -118,7 +118,7 @@ Special effects (chain lightning, burn, poison, etc.)
 Seed-based, weighted templates, biome support (later).
 
 ### Weapons Framework
-Data-driven: damage, firerate, projectile type, modifiers. Weapon rarity tiers (later).
+Data-driven: damage, firerate, projectile type, modifiers✅. Weapon rarity tiers (later).
 
 ## 5. Art Direction
 Pixel-art style similar to Soul Knight; clear silhouettes.
@@ -135,8 +135,6 @@ Online or local co-op.
 Crafting system or weapon upgrades.
 
 Achievements.
-
-Seasonal events.
 
 Story mode or lore entries.
 

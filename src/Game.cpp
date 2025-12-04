@@ -196,6 +196,11 @@ void Game::Render() {
             break;
     }
     
+    // Render debug menu on top of everything if open
+    if (m_debugMenuOpen) {
+        m_ui->RenderDebugMenu();
+    }
+    
     EndDrawing();
 }
 
@@ -204,6 +209,16 @@ void Game::HandleInput() {
     if (m_blockInputThisFrame) {
         m_blockInputThisFrame = false;
         return;  // Skip input processing this frame
+    }
+    
+    // Debug menu toggle (I) - available in most states
+    if (IsKeyPressed(KEY_I)) {
+        ToggleDebugMenu();
+    }
+    
+    // If debug menu is open, don't process other input
+    if (m_debugMenuOpen) {
+        return;
     }
     
     switch (m_state) {
@@ -499,4 +514,59 @@ void Game::ReturnToHub() {
     m_currentSubLevel = 1;
     
     m_state = GameState::HUB;
+}
+
+// Debug menu methods
+void Game::DebugEquipWeapon(int weaponIndex) {
+    if (!m_player) return;
+    
+    std::unique_ptr<Weapon> weapon;
+    switch (weaponIndex) {
+        case 0: weapon = std::make_unique<Weapon>(Weapon::CreatePistolData()); break;
+        case 1: weapon = std::make_unique<Weapon>(Weapon::CreateShotgunData()); break;
+        case 2: weapon = std::make_unique<Weapon>(Weapon::CreateSMGData()); break;
+        case 3: weapon = std::make_unique<Weapon>(Weapon::CreateMagicWandData()); break;
+        case 4: weapon = std::make_unique<Weapon>(Weapon::CreateHeavyCannonData()); break;
+        case 5: weapon = std::make_unique<Weapon>(Weapon::CreateBurstRifleData()); break;
+        default: return;
+    }
+    
+    m_player->EquipWeapon(std::move(weapon));
+}
+
+void Game::DebugSpawnEnemy(int enemyType) {
+    if (!m_enemies || !m_player) return;
+    
+    // Spawn enemy near player
+    Vector2 spawnPos = m_player->GetPosition();
+    spawnPos.x += 100 + Utils::RandomFloat(-50, 50);
+    spawnPos.y += 100 + Utils::RandomFloat(-50, 50);
+    
+    m_enemies->SpawnEnemy(static_cast<EnemyType>(enemyType), spawnPos);
+}
+
+void Game::DebugClearEnemies() {
+    if (m_enemies) {
+        m_enemies->Clear();
+    }
+}
+
+void Game::DebugChangeCharacter(CharacterType type) {
+    if (!m_player) return;
+    
+    // Store current health percentage to maintain relative health
+    float healthPercent = static_cast<float>(m_player->GetHealth()) / m_player->GetMaxHealth();
+    
+    m_player->SetCharacter(type);
+    
+    // Restore health to same percentage of new max health
+    int newHealth = static_cast<int>(healthPercent * m_player->GetMaxHealth());
+    if (newHealth < 1) newHealth = 1;
+    
+    // Since SetCharacter sets health to max, we need to adjust
+    // We'll just leave it at full health for simplicity in debug mode
+}
+
+void Game::DebugEndGame() {
+    m_state = GameState::RUN_RESULTS;
 }

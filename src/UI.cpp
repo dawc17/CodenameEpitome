@@ -531,3 +531,281 @@ void UIManager::RenderRunResults(int score, int stage, int subLevel, CharacterTy
     DrawText(continueText, (Game::SCREEN_WIDTH - continueWidth) / 2, 
              Game::SCREEN_HEIGHT - 100, 20, continueColor);
 }
+
+void UIManager::RenderDebugMenu() {
+    // Semi-transparent background
+    DrawRectangle(0, 0, Game::SCREEN_WIDTH, Game::SCREEN_HEIGHT, 
+                  ColorAlpha(BLACK, 0.85f));
+    
+    // Title
+    const char* title = "DEBUG MENU";
+    int titleWidth = MeasureText(title, 40);
+    DrawText(title, (Game::SCREEN_WIDTH - titleWidth) / 2, 30, 40, RED);
+    
+    const char* hint = "Press F1 to close";
+    int hintWidth = MeasureText(hint, 16);
+    DrawText(hint, (Game::SCREEN_WIDTH - hintWidth) / 2, 75, 16, GRAY);
+    
+    int panelWidth = 280;
+    int panelHeight = 520;
+    int panelSpacing = 40;
+    int totalWidth = 3 * panelWidth + 2 * panelSpacing;
+    int startX = (Game::SCREEN_WIDTH - totalWidth) / 2;
+    int panelY = 110;
+    
+    // ========== WEAPONS PANEL ==========
+    int weaponPanelX = startX;
+    DrawRectangle(weaponPanelX, panelY, panelWidth, panelHeight, Color{40, 40, 60, 255});
+    DrawRectangleLines(weaponPanelX, panelY, panelWidth, panelHeight, PURPLE);
+    
+    const char* weaponsTitle = "WEAPONS";
+    int weaponsTitleW = MeasureText(weaponsTitle, 24);
+    DrawText(weaponsTitle, weaponPanelX + (panelWidth - weaponsTitleW) / 2, panelY + 15, 24, PURPLE);
+    
+    const char* weaponNames[] = {"Pistol", "Shotgun", "SMG", "Magic Wand", "Heavy Cannon", "Burst Rifle"};
+    Color weaponColors[] = {YELLOW, ORANGE, YELLOW, PURPLE, RED, ORANGE};
+    
+    for (int i = 0; i < 6; ++i) {
+        Rectangle btnRect = {
+            static_cast<float>(weaponPanelX + 20),
+            static_cast<float>(panelY + 55 + i * 55),
+            static_cast<float>(panelWidth - 40),
+            45
+        };
+        
+        bool hovered = CheckCollisionPointRec(GetMousePosition(), btnRect);
+        Color bgColor = hovered ? Color{80, 80, 120, 255} : Color{50, 50, 80, 255};
+        
+        DrawRectangleRec(btnRect, bgColor);
+        DrawRectangleLinesEx(btnRect, 2, hovered ? weaponColors[i] : GRAY);
+        
+        int nameW = MeasureText(weaponNames[i], 18);
+        DrawText(weaponNames[i], 
+                 static_cast<int>(btnRect.x + (btnRect.width - nameW) / 2),
+                 static_cast<int>(btnRect.y + 13), 18, WHITE);
+        
+        if (hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            Game::Instance().DebugEquipWeapon(i);
+        }
+    }
+    
+    // ========== ENEMIES PANEL ==========
+    int enemyPanelX = startX + panelWidth + panelSpacing;
+    DrawRectangle(enemyPanelX, panelY, panelWidth, panelHeight, Color{40, 40, 60, 255});
+    DrawRectangleLines(enemyPanelX, panelY, panelWidth, panelHeight, GREEN);
+    
+    const char* enemiesTitle = "ENEMIES";
+    int enemiesTitleW = MeasureText(enemiesTitle, 24);
+    DrawText(enemiesTitle, enemyPanelX + (panelWidth - enemiesTitleW) / 2, panelY + 15, 24, GREEN);
+    
+    const char* enemyNames[] = {"Slime", "Skeleton", "Bat", "Goblin", "Golem (Mini Boss)"};
+    
+    for (int i = 0; i < 5; ++i) {
+        Rectangle btnRect = {
+            static_cast<float>(enemyPanelX + 20),
+            static_cast<float>(panelY + 55 + i * 55),
+            static_cast<float>(panelWidth - 40),
+            45
+        };
+        
+        bool hovered = CheckCollisionPointRec(GetMousePosition(), btnRect);
+        Color bgColor = hovered ? Color{80, 120, 80, 255} : Color{50, 80, 50, 255};
+        
+        DrawRectangleRec(btnRect, bgColor);
+        DrawRectangleLinesEx(btnRect, 2, hovered ? GREEN : GRAY);
+        
+        int nameW = MeasureText(enemyNames[i], 18);
+        DrawText(enemyNames[i], 
+                 static_cast<int>(btnRect.x + (btnRect.width - nameW) / 2),
+                 static_cast<int>(btnRect.y + 13), 18, WHITE);
+        
+        if (hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            Game::Instance().DebugSpawnEnemy(i);
+        }
+    }
+    
+    // Clear all enemies button
+    Rectangle clearEnemiesBtn = {
+        static_cast<float>(enemyPanelX + 20),
+        static_cast<float>(panelY + 55 + 5 * 55 + 20),
+        static_cast<float>(panelWidth - 40),
+        50
+    };
+    
+    bool clearHovered = CheckCollisionPointRec(GetMousePosition(), clearEnemiesBtn);
+    DrawRectangleRec(clearEnemiesBtn, clearHovered ? Color{120, 60, 60, 255} : Color{80, 40, 40, 255});
+    DrawRectangleLinesEx(clearEnemiesBtn, 2, clearHovered ? RED : MAROON);
+    
+    const char* clearText = "CLEAR ALL ENEMIES";
+    int clearW = MeasureText(clearText, 16);
+    DrawText(clearText, 
+             static_cast<int>(clearEnemiesBtn.x + (clearEnemiesBtn.width - clearW) / 2),
+             static_cast<int>(clearEnemiesBtn.y + 17), 16, WHITE);
+    
+    if (clearHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Game::Instance().DebugClearEnemies();
+    }
+    
+    // ========== GAME CONTROLS PANEL ==========
+    int controlPanelX = startX + 2 * (panelWidth + panelSpacing);
+    DrawRectangle(controlPanelX, panelY, panelWidth, panelHeight, Color{40, 40, 60, 255});
+    DrawRectangleLines(controlPanelX, panelY, panelWidth, panelHeight, SKYBLUE);
+    
+    const char* controlsTitle = "GAME CONTROLS";
+    int controlsTitleW = MeasureText(controlsTitle, 24);
+    DrawText(controlsTitle, controlPanelX + (panelWidth - controlsTitleW) / 2, panelY + 15, 24, SKYBLUE);
+    
+    // Character selection sub-section
+    DrawText("Change Character:", controlPanelX + 20, panelY + 55, 18, WHITE);
+    
+    // Terrorist button
+    Rectangle terroristBtn = {
+        static_cast<float>(controlPanelX + 20),
+        static_cast<float>(panelY + 85),
+        static_cast<float>(panelWidth - 40),
+        45
+    };
+    
+    bool terroristHovered = CheckCollisionPointRec(GetMousePosition(), terroristBtn);
+    DrawRectangleRec(terroristBtn, terroristHovered ? Color{100, 60, 60, 255} : Color{70, 40, 40, 255});
+    DrawRectangleLinesEx(terroristBtn, 2, terroristHovered ? Color{180, 80, 80, 255} : GRAY);
+    
+    const char* terroristText = "Terrorist";
+    int terroristW = MeasureText(terroristText, 18);
+    DrawText(terroristText, 
+             static_cast<int>(terroristBtn.x + (terroristBtn.width - terroristW) / 2),
+             static_cast<int>(terroristBtn.y + 13), 18, WHITE);
+    
+    if (terroristHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Game::Instance().DebugChangeCharacter(CharacterType::TERRORIST);
+    }
+    
+    // Counter-Terrorist button
+    Rectangle ctBtn = {
+        static_cast<float>(controlPanelX + 20),
+        static_cast<float>(panelY + 140),
+        static_cast<float>(panelWidth - 40),
+        45
+    };
+    
+    bool ctHovered = CheckCollisionPointRec(GetMousePosition(), ctBtn);
+    DrawRectangleRec(ctBtn, ctHovered ? Color{60, 60, 100, 255} : Color{40, 40, 70, 255});
+    DrawRectangleLinesEx(ctBtn, 2, ctHovered ? Color{80, 80, 180, 255} : GRAY);
+    
+    const char* ctText = "Counter-Terrorist";
+    int ctW = MeasureText(ctText, 18);
+    DrawText(ctText, 
+             static_cast<int>(ctBtn.x + (ctBtn.width - ctW) / 2),
+             static_cast<int>(ctBtn.y + 13), 18, WHITE);
+    
+    if (ctHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Game::Instance().DebugChangeCharacter(CharacterType::COUNTER_TERRORIST);
+    }
+    
+    // Separator
+    DrawLine(controlPanelX + 20, panelY + 210, controlPanelX + panelWidth - 20, panelY + 210, GRAY);
+    
+    // Quick actions
+    DrawText("Quick Actions:", controlPanelX + 20, panelY + 225, 18, WHITE);
+    
+    // Restore Health button
+    Rectangle healBtn = {
+        static_cast<float>(controlPanelX + 20),
+        static_cast<float>(panelY + 255),
+        static_cast<float>(panelWidth - 40),
+        45
+    };
+    
+    bool healHovered = CheckCollisionPointRec(GetMousePosition(), healBtn);
+    DrawRectangleRec(healBtn, healHovered ? Color{60, 100, 60, 255} : Color{40, 70, 40, 255});
+    DrawRectangleLinesEx(healBtn, 2, healHovered ? GREEN : GRAY);
+    
+    const char* healText = "Restore Full Health";
+    int healW = MeasureText(healText, 16);
+    DrawText(healText, 
+             static_cast<int>(healBtn.x + (healBtn.width - healW) / 2),
+             static_cast<int>(healBtn.y + 14), 16, WHITE);
+    
+    if (healHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Player* player = Game::Instance().GetPlayer();
+        if (player) {
+            player->Heal(player->GetMaxHealth());
+        }
+    }
+    
+    // Restore Energy button
+    Rectangle energyBtn = {
+        static_cast<float>(controlPanelX + 20),
+        static_cast<float>(panelY + 310),
+        static_cast<float>(panelWidth - 40),
+        45
+    };
+    
+    bool energyHovered = CheckCollisionPointRec(GetMousePosition(), energyBtn);
+    DrawRectangleRec(energyBtn, energyHovered ? Color{60, 60, 120, 255} : Color{40, 40, 80, 255});
+    DrawRectangleLinesEx(energyBtn, 2, energyHovered ? BLUE : GRAY);
+    
+    const char* energyText = "Restore Full Energy";
+    int energyW = MeasureText(energyText, 16);
+    DrawText(energyText, 
+             static_cast<int>(energyBtn.x + (energyBtn.width - energyW) / 2),
+             static_cast<int>(energyBtn.y + 14), 16, WHITE);
+    
+    if (energyHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Player* player = Game::Instance().GetPlayer();
+        if (player) {
+            player->RestoreFullEnergy();
+        }
+    }
+    
+    // Add Currency button
+    Rectangle currencyBtn = {
+        static_cast<float>(controlPanelX + 20),
+        static_cast<float>(panelY + 365),
+        static_cast<float>(panelWidth - 40),
+        45
+    };
+    
+    bool currencyHovered = CheckCollisionPointRec(GetMousePosition(), currencyBtn);
+    DrawRectangleRec(currencyBtn, currencyHovered ? Color{100, 90, 40, 255} : Color{70, 60, 30, 255});
+    DrawRectangleLinesEx(currencyBtn, 2, currencyHovered ? GOLD : GRAY);
+    
+    const char* currencyText = "Add 100 Currency";
+    int currencyW = MeasureText(currencyText, 16);
+    DrawText(currencyText, 
+             static_cast<int>(currencyBtn.x + (currencyBtn.width - currencyW) / 2),
+             static_cast<int>(currencyBtn.y + 14), 16, WHITE);
+    
+    if (currencyHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Player* player = Game::Instance().GetPlayer();
+        if (player) {
+            player->AddRunCurrency(100);
+        }
+    }
+    
+    // Separator
+    DrawLine(controlPanelX + 20, panelY + 430, controlPanelX + panelWidth - 20, panelY + 430, GRAY);
+    
+    // End Game button
+    Rectangle endGameBtn = {
+        static_cast<float>(controlPanelX + 20),
+        static_cast<float>(panelY + 450),
+        static_cast<float>(panelWidth - 40),
+        50
+    };
+    
+    bool endHovered = CheckCollisionPointRec(GetMousePosition(), endGameBtn);
+    DrawRectangleRec(endGameBtn, endHovered ? Color{150, 40, 40, 255} : Color{100, 30, 30, 255});
+    DrawRectangleLinesEx(endGameBtn, 3, endHovered ? RED : MAROON);
+    
+    const char* endText = "END GAME";
+    int endW = MeasureText(endText, 20);
+    DrawText(endText, 
+             static_cast<int>(endGameBtn.x + (endGameBtn.width - endW) / 2),
+             static_cast<int>(endGameBtn.y + 15), 20, WHITE);
+    
+    if (endHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Game::Instance().DebugEndGame();
+        Game::Instance().ToggleDebugMenu();  // Close menu after ending game
+    }
+}

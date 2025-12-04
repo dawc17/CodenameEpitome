@@ -31,6 +31,9 @@ public:
     // Shop
     void RenderShop();
     
+    // Debug menu
+    void RenderDebugMenu();
+    
     // Helpers
     static void DrawHealthBar(Vector2 pos, float width, float height, 
                               int current, int max, Color fillColor);
