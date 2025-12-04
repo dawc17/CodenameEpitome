@@ -52,6 +52,7 @@ public:
     void TakeDamage(int amount);
     void Heal(int amount);
     void UseEnergy(int amount);
+    void RestoreFullEnergy() { m_energy = m_stats.maxEnergy; m_energyRegenAccumulator = 0.0f; }
     void Shoot();
     void UseAbility();
     
@@ -115,7 +116,7 @@ private:
     float m_energyRegenDelay = 0.0f;  // Time before regen starts
     float m_energyRegenAccumulator = 0.0f;  // Accumulate fractional energy
     static constexpr float ENERGY_REGEN_DELAY = 1.5f;  // 3 seconds after use
-    static constexpr float ENERGY_REGEN_RATE = 5.0f;  // 5 energy per second
+    static constexpr float ENERGY_REGEN_RATE = 9.0f;  // 5 energy per second
     
     // Auto-aim settings
     static constexpr float AIM_RANGE = 300.0f;

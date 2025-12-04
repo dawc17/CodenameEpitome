@@ -91,6 +91,9 @@ void Game::Update() {
             if (m_enemies->GetActiveCount() == 0 && m_dungeon->GetCurrentRoom()) {
                 m_dungeon->GetCurrentRoom()->SetCleared(true);
                 
+                // Fully regenerate player energy when room is cleared
+                m_player->RestoreFullEnergy();
+                
                 // Check if all rooms are cleared to activate portal
                 bool allCleared = true;
                 for (const auto& room : m_dungeon->GetAllRooms()) {
