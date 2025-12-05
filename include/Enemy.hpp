@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Entity.hpp"
+#include "Pathfinding.hpp"
 #include <vector>
 #include <memory>
 #include <string>
@@ -68,6 +69,22 @@ protected:
     Vector2 m_lastKnownPlayerPos = {0, 0};  // Last known player position
     float m_searchTimer = 0.0f;  // Timer for searching behavior
     float m_immobilizeTimer = 0.0f;  // Timer for immobilize effect
+    
+    // Pathfinding - Using Seeker component (similar to Unity's A* Pathfinding)
+    Seeker m_seeker;              // Handles path requests and waypoint management
+    AIPathHelper m_pathHelper;     // Handles movement along the path
+    
+    // Legacy support (for gradual migration)
+    std::vector<Vector2> m_currentPath;
+    float m_pathUpdateTimer = 0.0f;
+    static constexpr float PATH_UPDATE_INTERVAL = 0.3f;  // Update path every 0.3 seconds
+    
+    // Movement helper
+    void MoveAlongPath(float dt, float speedMultiplier = 1.0f);
+    void UpdatePath(Vector2 targetPos);
+    
+    // New Seeker-based movement (preferred)
+    void MoveWithSeeker(Vector2 targetPos, float dt, float speedMultiplier = 1.0f);
     
     // AI state
     enum class AIState { IDLE, CHASE, ATTACK, SPECIAL, REPOSITION, SEARCH };

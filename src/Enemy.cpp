@@ -3,12 +3,23 @@
 #include "Player.hpp"
 #include "Projectile.hpp"
 #include "Dungeon.hpp"
+#include "Pathfinding.hpp"
 #include "Utils.hpp"
+#include "raymath.h"
 #include <algorithm>
 
 // Enemy implementation
 Enemy::Enemy(const EnemyData& data, Vector2 pos) 
     : Entity(pos, 20.0f), m_data(data), m_health(data.maxHealth) {
+    // Configure the Seeker component (similar to Unity's AIPath settings)
+    m_seeker.repathRate = PATH_UPDATE_INTERVAL;  // How often to recalculate paths
+    m_seeker.pickNextWaypointDist = 20.0f;       // Distance to pick next waypoint
+    m_seeker.constrainInsideGraph = true;        // Keep on walkable tiles
+    
+    // Configure the AIPathHelper
+    m_pathHelper.speed = m_data.moveSpeed;
+    m_pathHelper.slowdownDistance = 30.0f;
+    m_pathHelper.endReachedDistance = 10.0f;
 }
 
 void Enemy::Update(float dt) {
@@ -28,6 +39,7 @@ void Enemy::Update(float dt) {
     m_stateTimer -= dt;
     m_repositionTimer -= dt;
     m_searchTimer -= dt;
+    m_pathUpdateTimer -= dt;
 }
 
 void Enemy::Render() {
@@ -134,6 +146,122 @@ float Enemy::GetPreferredDistance() const {
     }
 }
 
+void Enemy::UpdatePath(Vector2 targetPos) {
+    DungeonManager* dungeon = Game::Instance().GetDungeon();
+    if (!dungeon) return;
+    
+    Room* currentRoom = dungeon->GetCurrentRoom();
+    if (!currentRoom) return;
+    
+    // Use the new Seeker-based pathfinding
+    m_seeker.StartPath(m_position, targetPos, currentRoom);
+    
+    // Also update legacy path for compatibility
+    m_currentPath = m_seeker.GetCurrentPath().vectorPath;
+    m_pathUpdateTimer = PATH_UPDATE_INTERVAL;
+}
+
+void Enemy::MoveAlongPath(float dt, float speedMultiplier) {
+    DungeonManager* dungeon = Game::Instance().GetDungeon();
+    if (!dungeon) return;
+    
+    Room* currentRoom = dungeon->GetCurrentRoom();
+    if (!currentRoom) return;
+    
+    // Use the new Seeker-based movement if we have a seeker path
+    if (m_seeker.HasPath()) {
+        // Update path helper speed based on our move speed
+        m_pathHelper.speed = m_data.moveSpeed;
+        
+        // Get target from current path destination
+        Vector2 target = m_seeker.GetCurrentPath().vectorPath.empty() ? 
+            m_position : m_seeker.GetCurrentPath().vectorPath.back();
+        
+        // Use AIPathHelper for smooth movement
+        Vector2 newPos = m_pathHelper.MoveToward(m_seeker, m_position, target, 
+                                                   currentRoom, dt, speedMultiplier);
+        
+        // Verify the new position is walkable (safety check)
+        if (dungeon->IsWalkable(newPos)) {
+            m_position = newPos;
+        } else {
+            // Path may be outdated, force recalculation
+            m_seeker.ClearPath();
+        }
+        return;
+    }
+    
+    // Fallback to legacy path following if no seeker path
+    if (m_currentPath.empty()) return;
+    
+    // Remove waypoints we've already passed (using pickNextWaypointDist)
+    while (!m_currentPath.empty()) {
+        float distToFirst = Vector2Distance(m_position, m_currentPath[0]);
+        if (distToFirst < m_seeker.pickNextWaypointDist) {
+            m_currentPath.erase(m_currentPath.begin());
+        } else {
+            break;
+        }
+    }
+    
+    if (m_currentPath.empty()) return;
+    
+    // Move toward first waypoint in path
+    Vector2 nextWaypoint = m_currentPath[0];
+    Vector2 toWaypoint = Vector2Subtract(nextWaypoint, m_position);
+    float distToWaypoint = Vector2Length(toWaypoint);
+    
+    if (distToWaypoint < 1.0f) return;  // Already there
+    
+    Vector2 moveDir = Vector2Normalize(toWaypoint);
+    Vector2 newPos = Vector2Add(m_position, 
+        Vector2Scale(moveDir, m_data.moveSpeed * speedMultiplier * dt));
+    
+    // Verify the new position is walkable (safety check)
+    if (dungeon->IsWalkable(newPos)) {
+        m_position = newPos;
+    } else {
+        // Path may be outdated, force recalculation
+        m_pathUpdateTimer = 0;
+        m_currentPath.clear();
+    }
+}
+
+void Enemy::MoveWithSeeker(Vector2 targetPos, float dt, float speedMultiplier) {
+    // High-level movement using the Seeker component
+    // This mirrors the Unity AIPath behavior
+    
+    DungeonManager* dungeon = Game::Instance().GetDungeon();
+    if (!dungeon) return;
+    
+    Room* currentRoom = dungeon->GetCurrentRoom();
+    if (!currentRoom) return;
+    
+    // Update seeker timer
+    m_seeker.Update(dt);
+    
+    // Repath if needed (based on repathRate)
+    if (m_seeker.ShouldRepath() || !m_seeker.HasPath()) {
+        m_seeker.StartPath(m_position, targetPos, currentRoom);
+        m_seeker.ResetRepathTimer();
+    }
+    
+    if (!m_seeker.HasPath()) return;
+    
+    // Use AIPathHelper for movement
+    m_pathHelper.speed = m_data.moveSpeed;
+    Vector2 newPos = m_pathHelper.MoveToward(m_seeker, m_position, targetPos,
+                                              currentRoom, dt, speedMultiplier);
+    
+    // Verify walkability (constrainInsideGraph)
+    if (m_seeker.constrainInsideGraph && !dungeon->IsWalkable(newPos)) {
+        m_seeker.ClearPath();  // Force repath
+        return;
+    }
+    
+    m_position = newPos;
+}
+
 void Enemy::UpdateAI(float dt) {
     Player* player = Game::Instance().GetPlayer();
     if (!player) return;
@@ -162,6 +290,7 @@ void Enemy::UpdateAI(float dt) {
         case AIState::CHASE:
             if (distToPlayer > m_data.detectionRange * 1.5f) {
                 m_aiState = AIState::IDLE;
+                m_currentPath.clear();
             } else if (!hasLOS) {
                 // Lost sight of player - go to search mode
                 m_aiState = AIState::SEARCH;
@@ -173,19 +302,16 @@ void Enemy::UpdateAI(float dt) {
                     m_aiState = AIState::REPOSITION;
                     m_repositionTarget = FindRepositionTarget();
                     m_repositionTimer = 2.0f;
+                    m_pathUpdateTimer = 0;  // Force path update
                 } else {
                     m_aiState = AIState::ATTACK;
                 }
             } else {
-                // Move toward player
-                Vector2 moveDir = Vector2Normalize(toPlayer);
-                Vector2 newPos = Vector2Add(m_position, 
-                    Vector2Scale(moveDir, m_data.moveSpeed * dt));
-                
-                DungeonManager* dungeon = Game::Instance().GetDungeon();
-                if (dungeon && dungeon->IsWalkable(newPos)) {
-                    m_position = newPos;
+                // Use pathfinding to move toward player
+                if (m_pathUpdateTimer <= 0) {
+                    UpdatePath(playerPos);
                 }
+                MoveAlongPath(dt);
             }
             break;
             
@@ -214,23 +340,23 @@ void Enemy::UpdateAI(float dt) {
             break;
             
         case AIState::REPOSITION: {
-            // Move toward reposition target
+            // Move toward reposition target using pathfinding
             Vector2 toTarget = Vector2Subtract(m_repositionTarget, m_position);
             float distToTarget = Vector2Length(toTarget);
             
             if (distToTarget < 10.0f || m_repositionTimer <= 0) {
                 // Reached target or timeout - go back to chase/attack
                 m_aiState = (distToPlayer < GetAttackRange() && hasLOS) ? AIState::ATTACK : AIState::CHASE;
+                m_currentPath.clear();
             } else {
-                Vector2 moveDir = Vector2Normalize(toTarget);
-                Vector2 newPos = Vector2Add(m_position, 
-                    Vector2Scale(moveDir, m_data.moveSpeed * 1.2f * dt));  // Move faster when repositioning
+                // Use pathfinding to reach reposition target
+                if (m_pathUpdateTimer <= 0) {
+                    UpdatePath(m_repositionTarget);
+                }
+                MoveAlongPath(dt, 1.2f);  // Move faster when repositioning
                 
-                DungeonManager* dungeon = Game::Instance().GetDungeon();
-                if (dungeon && dungeon->IsWalkable(newPos)) {
-                    m_position = newPos;
-                } else {
-                    // Can't reach target - abort reposition
+                // If path is empty but not at target, might be unreachable
+                if (m_currentPath.empty() && distToTarget > 20.0f) {
                     m_aiState = AIState::CHASE;
                 }
             }
@@ -251,19 +377,17 @@ void Enemy::UpdateAI(float dt) {
             if (hasLOS && distToPlayer < m_data.detectionRange) {
                 // Found player again
                 m_aiState = AIState::CHASE;
+                m_currentPath.clear();
             } else if (m_searchTimer <= 0 || distToLastKnown < 20.0f) {
                 // Gave up searching or reached last known position
                 m_aiState = AIState::IDLE;
+                m_currentPath.clear();
             } else {
-                // Move toward last known position
-                Vector2 moveDir = Vector2Normalize(toLastKnown);
-                Vector2 newPos = Vector2Add(m_position, 
-                    Vector2Scale(moveDir, m_data.moveSpeed * 0.7f * dt));  // Slower when searching
-                
-                DungeonManager* dungeon = Game::Instance().GetDungeon();
-                if (dungeon && dungeon->IsWalkable(newPos)) {
-                    m_position = newPos;
+                // Use pathfinding to move toward last known position
+                if (m_pathUpdateTimer <= 0) {
+                    UpdatePath(m_lastKnownPlayerPos);
                 }
+                MoveAlongPath(dt, 0.7f);  // Slower when searching
             }
             break;
         }
