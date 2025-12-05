@@ -4,6 +4,7 @@
 #include "Enemy.hpp"
 #include "Dungeon.hpp"
 #include "Utils.hpp"
+#include "SpriteManager.hpp"
 
 // Initialize static meta currency
 int Player::s_metaCurrency = 0;
@@ -88,12 +89,24 @@ void Player::Update(float dt) {
 }
 
 void Player::Render() {
-    // Draw player body
-    DrawCircleV(m_position, m_radius, m_color);
+    // Get sprite type based on character
+    SpriteType spriteType = (m_characterType == CharacterType::TERRORIST) ? 
+        SpriteType::PLAYER_TERRORIST : SpriteType::PLAYER_COUNTER_TERRORIST;
     
-    // Draw aim direction indicator
-    Vector2 aimEnd = Vector2Add(m_position, Vector2Scale(m_aimDirection, m_radius + 10));
-    DrawLineEx(m_position, aimEnd, 3.0f, WHITE);
+    // Calculate rotation from aim direction (in degrees)
+    float rotation = atan2f(m_aimDirection.y, m_aimDirection.x) * RAD2DEG;
+    
+    // Draw player - use sprite if available, otherwise fallback to circle
+    if (SpriteManager::Instance().HasSprite(spriteType)) {
+        SpriteManager::Instance().DrawFitRadius(spriteType, m_position, m_radius, rotation, WHITE);
+    } else {
+        // Fallback to primitive rendering
+        DrawCircleV(m_position, m_radius, m_color);
+        
+        // Draw aim direction indicator
+        Vector2 aimEnd = Vector2Add(m_position, Vector2Scale(m_aimDirection, m_radius + 10));
+        DrawLineEx(m_position, aimEnd, 3.0f, WHITE);
+    }
     
     // Draw target indicator if we have a target
     if (m_currentTarget && m_currentTarget->IsActive()) {

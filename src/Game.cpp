@@ -5,6 +5,7 @@
 #include "Projectile.hpp"
 #include "UI.hpp"
 #include "Utils.hpp"
+#include "SpriteManager.hpp"
 #include <ctime>
 
 Game& Game::Instance() {
@@ -15,6 +16,9 @@ Game& Game::Instance() {
 void Game::Init() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Codename: Epitome");
     SetTargetFPS(TARGET_FPS);
+    
+    // Initialize sprite manager first (needs window to be open)
+    SpriteManager::Instance().Init();
     
     // Initialize subsystems
     m_player = std::make_unique<Player>();
@@ -53,10 +57,16 @@ void Game::Shutdown() {
     m_projectiles.reset();
     m_ui.reset();
     
+    // Shutdown sprite manager
+    SpriteManager::Instance().Shutdown();
+    
     CloseWindow();
 }
 
 void Game::Update() {
+    // Update sprite animations
+    SpriteManager::Instance().Update(m_deltaTime);
+    
     switch (m_state) {
         case GameState::MENU:
             // Menu updates handled in UI

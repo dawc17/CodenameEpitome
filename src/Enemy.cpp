@@ -5,6 +5,7 @@
 #include "Dungeon.hpp"
 #include "Pathfinding.hpp"
 #include "Utils.hpp"
+#include "SpriteManager.hpp"
 #include "raymath.h"
 #include <algorithm>
 
@@ -45,9 +46,27 @@ void Enemy::Update(float dt) {
 void Enemy::Render() {
     if (IsDead()) return;
     
-    // Draw enemy body - tint blue if immobilized
+    // Get sprite type based on enemy type
+    SpriteType spriteType = SpriteType::ENEMY_SLIME;  // Default
+    switch (m_data.type) {
+        case EnemyType::SLIME: spriteType = SpriteType::ENEMY_SLIME; break;
+        case EnemyType::SKELETON: spriteType = SpriteType::ENEMY_SKELETON; break;
+        case EnemyType::BAT: spriteType = SpriteType::ENEMY_BAT; break;
+        case EnemyType::GOBLIN: spriteType = SpriteType::ENEMY_GOBLIN; break;
+        case EnemyType::MINI_BOSS_GOLEM: spriteType = SpriteType::ENEMY_GOLEM; break;
+    }
+    
+    // Draw enemy - use sprite if available, otherwise fallback to circle
     Color bodyColor = IsImmobilized() ? ColorTint(m_data.color, SKYBLUE) : m_data.color;
-    DrawCircleV(m_position, m_radius, bodyColor);
+    
+    if (SpriteManager::Instance().HasSprite(spriteType)) {
+        // Draw sprite with tint
+        Color tint = IsImmobilized() ? ColorTint(WHITE, SKYBLUE) : WHITE;
+        SpriteManager::Instance().DrawFitRadius(spriteType, m_position, m_radius, 0.0f, tint);
+    } else {
+        // Fallback to primitive rendering
+        DrawCircleV(m_position, m_radius, bodyColor);
+    }
     
     // Draw stun indicator if immobilized
     if (IsImmobilized()) {

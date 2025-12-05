@@ -2,6 +2,7 @@
 #include "Utils.hpp"
 #include "Game.hpp"
 #include "Player.hpp"
+#include "SpriteManager.hpp"
 
 // Room implementation
 Room::Room(int id, RoomType type, int gridX, int gridY)
@@ -525,13 +526,23 @@ void DungeonManager::Render() {
             float time = static_cast<float>(GetTime());
             float pulse = (sinf(time * 4.0f) + 1.0f) / 2.0f;
             
-            // Outer glow
-            DrawCircleV(m_portalPosition, 45.0f + pulse * 5.0f, ColorAlpha(PURPLE, 0.3f));
-            DrawCircleV(m_portalPosition, 35.0f + pulse * 3.0f, ColorAlpha(VIOLET, 0.5f));
-            
-            // Core
-            DrawCircleV(m_portalPosition, 25.0f, PURPLE);
-            DrawCircleV(m_portalPosition, 18.0f, ColorAlpha(WHITE, 0.7f + pulse * 0.3f));
+            // Try to use sprite if available
+            if (SpriteManager::Instance().HasSprite(SpriteType::PORTAL)) {
+                // Draw sprite with pulsing scale effect
+                float scale = 1.0f + pulse * 0.1f;
+                float rotation = time * 30.0f;  // Slow rotation
+                SpriteManager::Instance().DrawFitRadius(SpriteType::PORTAL, 
+                    m_portalPosition, 45.0f * scale, rotation, WHITE);
+            } else {
+                // Fallback to primitive rendering
+                // Outer glow
+                DrawCircleV(m_portalPosition, 45.0f + pulse * 5.0f, ColorAlpha(PURPLE, 0.3f));
+                DrawCircleV(m_portalPosition, 35.0f + pulse * 3.0f, ColorAlpha(VIOLET, 0.5f));
+                
+                // Core
+                DrawCircleV(m_portalPosition, 25.0f, PURPLE);
+                DrawCircleV(m_portalPosition, 18.0f, ColorAlpha(WHITE, 0.7f + pulse * 0.3f));
+            }
             
             // Text
             const char* text = "NEXT";
