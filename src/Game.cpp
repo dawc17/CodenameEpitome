@@ -6,6 +6,7 @@
 #include "UI.hpp"
 #include "Utils.hpp"
 #include "SpriteManager.hpp"
+#include "AchievementManager.hpp"
 #include <ctime>
 
 Game& Game::Instance() {
@@ -16,6 +17,8 @@ Game& Game::Instance() {
 void Game::Init() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Codename: Epitome");
     SetTargetFPS(TARGET_FPS);
+    
+    AchievementManager::Instance().Init();
     
     // Initialize sprite manager first (needs window to be open)
     SpriteManager::Instance().Init();
@@ -501,6 +504,11 @@ void Game::CheckPortalEntry() {
         m_projectiles->Clear();
         m_enemies->Clear();
         
+        // Check for Survivor achievement (clearing first floor)
+        if (m_currentStage == 1 && m_currentSubLevel == 1) {
+             AchievementManager::Instance().UnlockAchievement("SURVIVOR");
+        }
+
         // Increment level
         m_currentSubLevel++;
         if (m_currentSubLevel > 5) {

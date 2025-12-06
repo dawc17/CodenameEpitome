@@ -6,6 +6,7 @@
 #include "Pathfinding.hpp"
 #include "Utils.hpp"
 #include "SpriteManager.hpp"
+#include "AchievementManager.hpp"
 #include "raymath.h"
 #include <algorithm>
 
@@ -550,7 +551,12 @@ void EnemyManager::Update(float dt) {
     m_enemies.erase(
         std::remove_if(m_enemies.begin(), m_enemies.end(),
             [](const std::unique_ptr<Enemy>& e) { 
-                return !e || e->IsDead(); 
+                if (!e) return true;
+                if (e->IsDead()) {
+                    AchievementManager::Instance().UnlockAchievement("FIRST_BLOOD");
+                    return true;
+                }
+                return false; 
             }),
         m_enemies.end()
     );

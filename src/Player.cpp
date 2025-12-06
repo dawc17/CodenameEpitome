@@ -5,6 +5,7 @@
 #include "Dungeon.hpp"
 #include "Utils.hpp"
 #include "SpriteManager.hpp"
+#include "AchievementManager.hpp"
 
 // Initialize static meta currency
 int Player::s_metaCurrency = 0;
@@ -437,4 +438,11 @@ std::vector<BuffData> Player::GetRandomFloorBuffs(int count) {
     }
     
     return result;
+}
+
+void Player::AddRunCurrency(int amount) {
+    m_runCurrency += amount;
+    if (m_runCurrency >= 500) {
+        AchievementManager::Instance().UnlockAchievement("HOARDER");
+    }
 }

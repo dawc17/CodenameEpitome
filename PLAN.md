@@ -132,7 +132,7 @@ Online or local co-op.
 
 Crafting system or weapon upgrades.
 
-Achievements.
+Achievements. ✅
 
 Story mode or lore entries.
 

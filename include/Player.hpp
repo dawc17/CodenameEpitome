@@ -81,7 +81,7 @@ public:
     
     // Run Currency (lost on death)
     int GetRunCurrency() const { return m_runCurrency; }
-    void AddRunCurrency(int amount) { m_runCurrency += amount; }
+    void AddRunCurrency(int amount);
     bool SpendRunCurrency(int amount);
     
     // Meta Currency (persists between runs)
